@@ -53,7 +53,7 @@ def atualizarKm():
 # Manutenção
 def realizarManutencao():
 def proxManutencao():
-def verificarManutencoes();
+def verificarManutencoes():
 def agendarManutencao():
 def alertaManutencao():
 

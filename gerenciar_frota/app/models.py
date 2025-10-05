@@ -7,6 +7,7 @@ class Veiculo(models.Model):
     autonomia = models.DecimalField(max_digits=5, decimal_places=2)
     ultimaManutencao = models.DateField()
     disponivel = models.BooleanField(default=True)
+
     
    
     def __str__(self):

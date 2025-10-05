@@ -4,7 +4,7 @@ from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coor
 class VeiculoForm(forms.ModelForm):
     class Meta:
         model = Veiculo
-        fields = ['placa', 'modelo', 'km', 'autonomia', 'ultimaManutencao', 'disponivel']
+        fields = ['placa', 'modelo','km', 'autonomia', 'ultimaManutencao', 'disponivel']
 
 class MotoristaForm(forms.ModelForm):
     class Meta:

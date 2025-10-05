@@ -6,7 +6,9 @@ from .forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, Abas
 from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coordenada
 
 # ------------------Sistema-------------------------------------------------------------------------
-
+def det(request):
+    return render(request,'VEICULOS/listadetalhes.html',{'veiculo': Veiculo.objects.all()})
+ 
 def index(request):
     return render(request,'index.html')
 
@@ -61,7 +63,7 @@ def abastecer(request):
     if request.method == 'POST':
         form = AbastecimentoForm(request.POST)
         if form.is_valid():
-            AbastecimentoForm.save()
+            Abastecimento.save()
             messages.success(request, 'Abastecimento realizado com sucesso')
             return redirect('listaAbastecimentos')
         else:
@@ -108,6 +110,8 @@ def veiculosDisponiveis(request):
     else:
         messages.error(request, 'O veículo não está disponível')
         return redirect('index')
+    
+
 # -------------------Manutenção--------------------------------------------
 def realizarManutencao(request):
     if request.method == 'POST':

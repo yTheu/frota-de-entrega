@@ -1,134 +1,78 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8" />
+  <title>Monitoramento de Frota - Mapa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Página com Barras Laterais</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    /* ======== ESTILOS GERAIS ======== */
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column; /* header em cima, footer embaixo */
-      min-height: 100vh;
-    }
-
-    /* ======== CABEÇALHO ======== */
-    header { 
-      background: #099734; 
-      color: #fff; 
-      padding: 20px; 
-      text-align: center; 
-      width: 100%;
-    }
-
-    /* ======== ÁREA PRINCIPAL ======== */
-    main {
-      flex: 1; /* ocupa o espaço restante entre header e footer */
-      display: flex; /* organiza sidebar e conteúdo lado a lado */
-      background-color: #f2f2f2;
-    }
-
-    /* ======== BARRA LATERAL ======== */
-    .sidebar-esquerda {
-      width: 200px;
-      background-color: #333;
-      color: white;
-      padding: 20px;
-    }
-
-    .barra_lateral {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .placa {
-      border: 2px solid #099734;
-      border-radius: 10px;
-      padding: 15px;
-      background-color: #099734;
-      text-align: center;
-      transition: background 0.3s;
-    }
-
-    .placa:hover {
-      background-color: #0bbf46;
-    }
-
-    .placa a {
-      font-family: 'Times New Roman', Times, serif;
-      color: white;
-      text-decoration: none;
-      font-size: 18px;
-    }
-
-    /* ======== CONTEÚDO PRINCIPAL ======== */
-    .conteudo {
-      flex: 1; /* ocupa o resto do espaço */
-      padding: 40px;
-      text-align: center;
-    }
-
-    /* ======== RODAPÉ ======== */
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #222;
-      color: white;
-      text-align: center;
-      padding: 10px;
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .info-box {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 8px 12px;
+      z-index: 1000;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
+  <div id="map"></div>
+  <div class="info-box" id="info">Atualizando...</div>
 
-  <header>
-    <h1>Gerenciamento de Frota</h1>
-  </header>
-  
-  <main>
-    <div class="sidebar-esquerda">
-      <h3>Menu</h3>
-      <div class="barra_lateral">
-        <div class="placa"><a href="#">Gerenciar Veículos</a></div>
-        <div class="placa"><a href="#">Gerenciar Entregas</a></div>
-        <div class="placa"><a href="#">Gerenciar Manutenções</a></div>
-        <div class="placa"><a href="#">Alertas de Status</a></div>
-        <div class="placa"><a href="#">Alertas de Manutenção</a></div>
-      </div>
-    </div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const API_VEICULOS = "/api/veiculos/"; // ajuste se necessário
+    const map = L.map('map').setView([-23.55, -46.63], 12); // centro inicial
 
-    <div class = "conteudo">
-           <article>
-            <h1>
-                Bem-vindo ao Sistema de Gerenciamento de Frota
-            </h1>
-            <h1> 
-                Estamos em obra!!  
-            </h1>
-            <p >
-               <a href="https://youtu.be/dQw4w9WgXcQ?list=PLV2ewAgCPCq0DVamOw2sQSAVdFVjA6x78">CLique aqui</a> 
-            </p>
-         </article>  
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-         <h1>veja uma amostra de mais ou menos que vai ficaer</h1>
-         <h3>Exemplo:</h3>
-         <p>Use o menu para navegar entre as funcionalidades.</p>
-       
-    </div>
-  </main>
+    // dicionário de marcadores por id
+    const markers = {};
 
-  <footer>
-    © 2025 - Meu Site
-  </footer>
+    async function fetchVeiculos() {
+      try {
+        const res = await fetch(API_VEICULOS);
+        const data = await res.json();
+        document.getElementById('info').innerText = `Veículos: ${data.length} — atualizado: ${new Date().toLocaleTimeString()}`;
 
+        data.forEach(v => {
+          if (v.latitude == null || v.longitude == null) return;
+          const lat = parseFloat(v.latitude);
+          const lon = parseFloat(v.longitude);
+          const id = v.id;
+
+          if (markers[id]) {
+            // atualiza posição do marcador e popup
+            markers[id].setLatLng([lat, lon]);
+            markers[id].getPopup().setContent(`<b>${v.placa}</b><br>${v.nome || ''}<br>${new Date(v.ultima_atualizacao).toLocaleString()}`);
+          } else {
+            // cria novo marcador
+            const marker = L.marker([lat, lon]).addTo(map);
+            marker.bindPopup(`<b>${v.placa}</b><br>${v.nome || ''}<br>${new Date(v.ultima_atualizacao).toLocaleString()}`);
+            markers[id] = marker;
+          }
+        });
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('info').innerText = 'Erro ao buscar veículos';
+      }
+    }
+
+    // primeira carga
+    fetchVeiculos();
+
+    // atualiza a cada 5s
+    setInterval(fetchVeiculos, 5000);
+  </script>
 </body>
 </html>

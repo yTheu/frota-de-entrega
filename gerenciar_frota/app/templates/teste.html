@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Página com Barras Laterais</title>
+  <style>
+    /* ======== ESTILOS GERAIS ======== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column; /* header em cima, footer embaixo */
+      min-height: 100vh;
+    }
+
+    /* ======== CABEÇALHO ======== */
+    header { 
+      background: #099734; 
+      color: #fff; 
+      padding: 20px; 
+      text-align: center; 
+      width: 100%;
+    }
+
+    /* ======== ÁREA PRINCIPAL ======== */
+    main {
+      flex: 1; /* ocupa o espaço restante entre header e footer */
+      display: flex; /* organiza sidebar e conteúdo lado a lado */
+      background-color: #f2f2f2;
+    }
+
+    /* ======== BARRA LATERAL ======== */
+    .sidebar-esquerda {
+      width: 200px;
+      background-color: #333;
+      color: white;
+      padding: 20px;
+    }
+
+    .barra_lateral {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .placa {
+      border: 2px solid #099734;
+      border-radius: 10px;
+      padding: 15px;
+      background-color: #099734;
+      text-align: center;
+      transition: background 0.3s;
+    }
+
+    .placa:hover {
+      background-color: #0bbf46;
+    }
+
+    .placa a {
+      font-family: 'Times New Roman', Times, serif;
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+    }
+
+    /* ======== CONTEÚDO PRINCIPAL ======== */
+    .conteudo {
+      flex: 1; /* ocupa o resto do espaço */
+      padding: 40px;
+      text-align: center;
+    }
+
+    /* ======== RODAPÉ ======== */
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #222;
+      color: white;
+      text-align: center;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Gerenciamento de Frota</h1>
+  </header>
+  
+  <main>
+    <div class="sidebar-esquerda">
+      <h3>Menu</h3>
+      <div class="barra_lateral">
+        <div class="placa"><a href="#">Gerenciar Veículos</a></div>
+        <div class="placa"><a href="#">Gerenciar Entregas</a></div>
+        <div class="placa"><a href="#">Gerenciar Manutenções</a></div>
+        <div class="placa"><a href="#">Alertas de Status</a></div>
+        <div class="placa"><a href="#">Alertas de Manutenção</a></div>
+      </div>
+    </div>
+
+    <div class = "conteudo">
+           <article>
+            <h1>
+                Bem-vindo ao Sistema de Gerenciamento de Frota
+            </h1>
+            <h1> 
+                Estamos em obra!!  
+            </h1>
+            <p >
+               <a href="https://youtu.be/dQw4w9WgXcQ?list=PLV2ewAgCPCq0DVamOw2sQSAVdFVjA6x78">CLique aqui</a> 
+            </p>
+         </article>  
+
+         <h1>veja uma amostra de mais ou menos que vai ficaer</h1>
+         <h3>Exemplo:</h3>
+         <p>Use o menu para navegar entre as funcionalidades.</p>
+       
+    </div>
+  </main>
+
+  <footer>
+    © 2025 - Meu Site
+  </footer>
+
+</body>
+</html>

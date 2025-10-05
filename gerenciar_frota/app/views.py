@@ -10,6 +10,9 @@ from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coor
 def index(request):
     return render(request,'index.html')
 
+def test(request):
+    return render(request,'teste.html')
+
 def coordenadasMapa(request):
     coordenadas = Coordenada.objects.all()
     return render(request, 'coordenadasMapa.html', {'coordenadas': coordenadas})

@@ -202,6 +202,7 @@ def monitorarEntrega(request, id):
     entrega = get_object_or_404(Entrega, id=id)
     return render(request, 'monitorarEntrega.html', {'entrega': entrega})
 
+<<<<<<< HEAD
 def atualizarStatus(request, id):
     entrega = get_object_or_404(Entrega, id=id)
     if request.method == 'POST':
@@ -216,6 +217,14 @@ def atualizarStatus(request, id):
     else:
         form = EntregaForm(instance=entrega)
     return render(request, 'detalhesEntregas.html', {'entrega': entrega})
+=======
+# Manutenção
+def realizarManutencao():
+def proxManutencao():
+def verificarManutencoes():
+def agendarManutencao():
+def alertaManutencao():
+>>>>>>> 86c99e0 (nada dms)
 
 def atualizarCoordenada(request):
     if request.method == 'POST':

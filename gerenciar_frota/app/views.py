@@ -32,7 +32,7 @@ def listaEntregas(request):
     return render(request, 'listaEntregas.html', {'entregas': entregas})
     
 def listaManutencoes(request):
-    manutencoes = get_object_or_404(id=id)
+    manutencoes = get_object_or_404(Manutencao, id=id)
     return render(request, 'listaManutencoes.html', {'manutencoes': manutencoes})
 
 # ----------------Motorista-------------------------------------
@@ -103,7 +103,7 @@ def atualizarKm(request, id):
     return render(request, 'atualizarKm.html', {'veiculo': veiculo})
 
 def veiculosDisponiveis(request):
-    if request.method ==' GET':
+    if request.method == 'GET':
      veiculo = Veiculo.objects.get(disponivel=True)
      return render(request, 'veiculosDisponiveis.html', {'veiculo': veiculo})
      #return redirect('veiculosDisponiveis.html')
@@ -133,7 +133,7 @@ def proxManutencao(request, id):
     
 
 
-def verificarManutencoes(request):
+def verificarManutencoes(request, id):
     veiculo = get_object_or_404(Veiculo, id=id)
     if veiculo.precisa_manutencao():
 
@@ -202,7 +202,6 @@ def monitorarEntrega(request, id):
     entrega = get_object_or_404(Entrega, id=id)
     return render(request, 'monitorarEntrega.html', {'entrega': entrega})
 
-<<<<<<< HEAD
 def atualizarStatus(request, id):
     entrega = get_object_or_404(Entrega, id=id)
     if request.method == 'POST':
@@ -217,14 +216,6 @@ def atualizarStatus(request, id):
     else:
         form = EntregaForm(instance=entrega)
     return render(request, 'detalhesEntregas.html', {'entrega': entrega})
-=======
-# Manutenção
-def realizarManutencao():
-def proxManutencao():
-def verificarManutencoes():
-def agendarManutencao():
-def alertaManutencao():
->>>>>>> 86c99e0 (nada dms)
 
 def atualizarCoordenada(request):
     if request.method == 'POST':
@@ -238,6 +229,7 @@ def atualizarCoordenada(request):
     else:
         form = CoordenadaForm()
     return render(request, 'atualizarCoordenada.html', {'form': form})
+
 def concluirEntrega(request):
     if request.method == 'POST':
         entrega_id = request.POST.get('entrega_id')
@@ -249,8 +241,9 @@ def concluirEntrega(request):
     else:
         messages.error(request, 'Não foi possível concluir a entrega')
     return redirect('listaEntregas')
+
 def alertaStatus(request): 
-    entregas = get_object_or_404(id=id)
+    entregas = get_object_or_404(Entrega, id=id)
     if entregas.status == 'PENDENTE':
         messages.warning(request, 'Existem entregas pendentes!')
     elif entregas.status == 'EM TRANSITO':

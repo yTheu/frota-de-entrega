@@ -1,38 +1,10 @@
 {% extends 'base.html' %}
-
-{% block title %}veiculo{% endblock %}
-
 {% block content %}
-<div class="container">
-    <h1 class="text-center mb-4">veiculo</h1>
 
-    <table class="table table-bordered table-striped">
-        <thead class="bg-primary text-white">
-            <tr>
-                <th>placa</th>
-                <th>modelo</th>
-                <th>km</th>
-                <th>autonomia</th>
-                <th>ultimaManutencao</th>
-                <th>disponivel</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white">
-            {% for veiculo in veiculo %}
-                <tr>
-                    <td>{{ veiculo.placa }}</td>
-                    <td>{{ veiculo.modelo }}</td>
-                    <td>{{ veiculo.km }}</td>
-                    <td>{{ veiculo.autonomia }}</td>
-                    <td>{{ veiculo.ultimaManutencao }}</td>
-                    <td>{{ veiculo.disponivel }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center">Nenhum veiculo encontrado.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <b>placa:</b> {{ veiculo.placa }}<br />
+    <b>modelo:</b> {{ veiculo.modelo }}<br />
+    <b>km:</b> {{ veiculo.km }}<br />
+    <b>autonomia:</b> {{ veiculo.autonomia }}<a>km</a><br />
+    <b>ultimaManutenção:</b>{{veiculo.ultimaManutencao}}<br />
+    <b>disponivel:</b> {{ veiculo.disponivel }}<br />
 {% endblock %}

@@ -2,12 +2,16 @@ from datetime import timedelta
 from django.utils import timezone
 from django.shortcuts import render,redirect, get_object_or_404
 from django.contrib import messages
-from .forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, AbastecimentoForm, CoordenadaForm
+from app.forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, AbastecimentoForm, CoordenadaForm
 from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coordenada
 
 # ------------------Sistema-------------------------------------------------------------------------
-def det(request):
-    return render(request,'VEICULOS/listadetalhes.html',{'veiculo': Veiculo.objects.all()})
+def listadetalhes(request, id):
+    return render(request,'VEICULOS/listadetalhes.html',{'veiculo': Veiculo.objects.get(id=id)})
+
+def veiculo (request):
+
+    return render(request,'VEICULOS/veiculos.html',{'veiculo': Veiculo.objects.all()})
  
 def index(request):
     return render(request,'index.html')
@@ -73,22 +77,24 @@ def abastecer(request):
     return render(request, 'abastecer.html', {'form': form})
 
 # ----------------------Veiculo--------------------------------------------------
+
+
 def cadastrarVeiculo(request):
     if request.method == 'POST':
         form = VeiculoForm(request.POST)
         if form.is_valid():
-            VeiculoForm.save()
+            form.save()
             messages.success(request, 'Veículo cadastrado com sucesso')
-            return redirect('listaVeiculos')
+            return redirect('veiculos')
         else:
             messages.error(request, 'Erro ao cadastrar o veículo')
     else:
         form = VeiculoForm()
 
-    return render(request, 'cadastrarVeiculo.html', {'form': form})
+    return render(request, 'VEICULOS/cadastrarVeiculos.html', {'form': form})
 
 def atualizarKm(request, id):
-    veiculo = Veiculo.objects.get(id=id)
+    veiculo = get_object_or_404(Veiculo, id=id)
     if request.method == 'POST':
         form = VeiculoForm(request.POST, instance=veiculo)
         if form.is_valid():

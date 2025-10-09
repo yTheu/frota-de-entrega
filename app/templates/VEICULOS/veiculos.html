@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -5,9 +7,16 @@
     <title>Gerenciamento de Frota</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciamento de Frota</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
 
-        
+         html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          
+         }
 
     
         body  { 
@@ -17,7 +26,6 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            width: 100%;
         }
 
         header { 
@@ -160,10 +168,12 @@
             text-align: center;
             padding: 20px;
             flex :1;
-            
-            
-            
+            width: 80px;
         }
+        .welcome th {
+            background: #e01c1c;
+        }
+
         .barra_lateral {
             width: 200px;
             flex-direction: column;
@@ -171,6 +181,11 @@
             color: white;
             padding: 20px;
             gap: 10px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
         }
         
         
@@ -188,30 +203,71 @@
         
         <div class= "barra_lateral">
             <h3 >Menu</h3>
-            <div class = "placa"><a href="veiculos">Gerenciar Veículos</a></div>
-            <div class = "placa"><a href="det" >Gerenciar Entregas</a></div>
-            <div class = "placa"><a href="">Gerenciar Manutenções</a></div>
-            <div class = "placa"><a href="#">Alertas de Status</a></div>
-            <div class = "placa"><a href="#">Alertas de Manutenção</a></div>
-            <div class = "placa"><a href="https://youtu.be/dQw4w9WgXcQ?list=PLV2ewAgCPCq0DVamOw2sQSAVdFVjA6x78">Clique aqui</a></div>
+            <div class = "placa"><a href="cadastrarVeiculo">Cadastrar veiculos</a></div>
+            <div class = "placa"><a href="">Veiculos Disponivel</a></div>
+            
         </div>
         
     
         
        <div class = "welcome">
-           <article>
-            <h1>
-                Bem-vindo ao Sistema de Gerenciamento de Frota
-            </h1>
-            <h1> 
-                Estamos em obra!!  
-            </h1>
-           
-         </article>  
+          
 
-        
+            {% block content %}
+
+
+            <div class="container">
+              
+                
+         
+               
+               <h1 class="text-center mb-4">Lista de veiculos</h1>
+
+                <table class="table table-bordered table-striped">
+                    <thead class="bg-primary text-white">
+                      <tr>
+                        <th>placa</th>
+                        <th>modelo</th>
+                        <th>km</th>
+                        <th>disponibilidade</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                         {% for veiculo in veiculo %}
+                        <tr>
+                            <td>{{ veiculo.placa }}</td>
+                            <td>{{ veiculo.modelo }}</td>
+                            <td>{{ veiculo.km }}</td>
+                            <td>{{ veiculo.disponivel }}</td>
+                            <td>
+                                <a href="{% url 'listadetalhes' veiculo.id %}" class="btn btn-info btn-sm">
+                                <i class="fa fa-info" aria-hidden="true"></i>
+                                </a>
+                                <a href="{% url 'atualizarKm' veiculo.id %}" class="btn btn-warning btn-sm">
+                                <i class="fa fa-pencil" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+
+                            {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Nenhum veiculo encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+         {% endblock %}
+           
+          
+
+
          <p>Use o menu para navegar entre as funcionalidades.</p> 
        </div>
+
+
+       
     </main> 
 
     <footer>
@@ -221,4 +277,5 @@
 </html>
 
    
+
 

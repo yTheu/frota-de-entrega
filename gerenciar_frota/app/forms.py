@@ -4,7 +4,7 @@ from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coor
 class VeiculoForm(forms.ModelForm):
     class Meta:
         model = Veiculo
-        fields = ['placa', 'modelo','km', 'autonomia', 'ultimaManutencao', 'disponivel']
+        fields = ['placa', 'modelo','km', 'autonomia', 'ultimaManutencao', 'status']
 
 class MotoristaForm(forms.ModelForm):
     class Meta:
@@ -14,7 +14,12 @@ class MotoristaForm(forms.ModelForm):
 class EntregaForm(forms.ModelForm):
     class Meta:
         model = Entrega
-        fields = ['origem', 'destino', 'status', 'veiculo']
+        fields = ['origem', 'destino', 'status', 'veiculo', 'data_inicio_prevista', 'data_fim_prevista']
+
+    #mostrar só os veículos disponíveis
+    def __init__(self, *args, **kwargs):
+            super(EntregaForm, self).__init__(*args, **kwargs)
+            self.fields['veiculo'].queryset = Veiculo.objects.filter(status_veiculo='DISPONIVEL')
 
 class ManutencaoForm(forms.ModelForm):
     class Meta:

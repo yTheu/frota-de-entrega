@@ -32,7 +32,7 @@ def listaEntregas(request):
     return render(request, 'listaEntregas.html', {'entregas': entregas})
     
 def listaManutencoes(request):
-    manutencoes = get_object_or_404(Manutencao, id=id)
+    manutencoes = Manutencao.objects.all()
     return render(request, 'listaManutencoes.html', {'manutencoes': manutencoes})
 
 # ----------------Motorista-------------------------------------
@@ -52,8 +52,9 @@ def cadastrarMotorista(request):
 
 def motoristasDisponiveis(request):
     if request.method ==' GET':
-     motorista = Motorista.objects.get(disponivel=True)
-     return render(request, 'motoristasDisponiveis.html', {'motorista': motorista})
+        motoristas_disponiveis = Motorista.objects.filter(disponivel=True)
+        return render(request, 'motoristasDisponiveis.html', {'motoristas': motoristas_disponiveis})
+
      #return redirect('motoristasDisponiveis.html')
     else:
         messages.error(request, 'O motorista não está disponível')
@@ -130,8 +131,6 @@ def realizarManutencao(request):
 def proxManutencao(request, id):
     veiculo = get_object_or_404(Manutencao, id=id)
     return render(request, 'proxManutencao.html', {'veiculo': veiculo})
-    
-
 
 def verificarManutencoes(request, id):
     veiculo = get_object_or_404(Veiculo, id=id)

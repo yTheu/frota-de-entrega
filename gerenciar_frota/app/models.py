@@ -6,10 +6,13 @@ class Veiculo(models.Model):
     km = models.PositiveIntegerField()
     autonomia = models.DecimalField(max_digits=5, decimal_places=2)
     ultimaManutencao = models.DateField()
-    disponivel = models.BooleanField(default=True)
-
+    status_veiculo = [
+        ('DISPONIVEL', 'Disponível'),
+        ('EM_ENTREGA', 'Em Entrega'),
+        ('EM_MANUTENCAO', 'Em Manutenção')
+    ]
+    status = models.CharField(max_length=15, choices=status_veiculo, default='DISPONIVEL')
     
-   
     def __str__(self):
         return f"{self.modelo} ({self.placa})"
 
@@ -78,3 +81,9 @@ class Entrega(models.Model):
     )
     veiculo = models.ForeignKey('Veiculo', on_delete=models.SET_NULL, null=True, blank=True)
    
+    data_inicio_prevista = models.DateTimeField()
+    data_fim_prevista = models.DateTimeField()
+
+    def restricoes(self):
+        if self.veiculo and self.veiculo.status != 'DISPONIVEL':
+            raise ValidadtionError(f'O veículo {self.veiculo.modelo} - {self.veiculo.placa} não está disponível!')

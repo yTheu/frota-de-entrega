@@ -176,31 +176,21 @@
             padding: 20px;
             gap: 10px;
         }
-        
-        
-        
-
     </style>
-    
 </head>
 <body>
     <header>
         <h1>Gerenciamento de Frota</h1>
     </header>
-    
     <main>
-        
         <div class= "barra_lateral">
             <h3 >Menu</h3>
-            <div class = "placa"><a href="test">Gerenciar Veículos</a></div>
-            <div class = "placa"><a href="det" >Gerenciar Entregas</a></div>
-            <div class = "placa"><a href="#">Gerenciar Manutenções</a></div>
-            <div class = "placa"><a href="#">Alertas de Status</a></div>
+            <div class = "placa"><a href="{% url 'lista_veiculos' %}">Gerenciar Veículos</a></div>
+            <div class = "placa"><a href="{% url 'lista_entregas' %}" >Gerenciar Entregas</a></div>
+            <div class = "placa"><a href="{% url 'manutencoes' %}">Gerenciar Manutenções</a></div>
             <div class = "placa"><a href="#">Alertas de Manutenção</a></div>
             <div class = "placa"><a href="https://youtu.be/dQw4w9WgXcQ?list=PLV2ewAgCPCq0DVamOw2sQSAVdFVjA6x78">Clique aqui</a></div>
         </div>
-        
-    
         
        <div class = "welcome">
            <article>
@@ -223,6 +213,3 @@
    </footer>
 </body>
 </html>
-
-   
-

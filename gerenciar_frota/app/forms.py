@@ -19,7 +19,7 @@ class EntregaForm(forms.ModelForm):
     #mostrar só os veículos disponíveis
     def __init__(self, *args, **kwargs):
             super(EntregaForm, self).__init__(*args, **kwargs)
-            self.fields['veiculo'].queryset = Veiculo.objects.filter(status_veiculo='DISPONIVEL')
+            self.fields['veiculo'].queryset = Veiculo.objects.filter(status='DISPONIVEL')
 
 class ManutencaoForm(forms.ModelForm):
     class Meta:
@@ -35,4 +35,3 @@ class CoordenadaForm(forms.ModelForm):
     class Meta:
         model = Coordenada
         fields = ['latitude', 'longitude']
-

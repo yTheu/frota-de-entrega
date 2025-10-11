@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+
 
 class Veiculo(models.Model):
     placa = models.CharField(max_length=10, unique=True)
@@ -13,6 +15,12 @@ class Veiculo(models.Model):
     ]
     status = models.CharField(max_length=15, choices=status_veiculo, default='DISPONIVEL')
     
+    def precisa_manutencao(self):
+        if not self.ultimaManutencao:
+            return True
+        else:
+            return(timezone.now().date() - self.ultimaManutencao).days - 100 #valor qlqr por enquanto
+
     def __str__(self):
         return f"{self.modelo} ({self.placa})"
 

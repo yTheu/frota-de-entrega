@@ -1,36 +1,127 @@
+{% load static %} {# Carrega tags para arquivos estáticos #}
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ title }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    .op{
-    background: #099734; 
-    color: #fff; 
-    padding: 10px; 
-    text-align: center; 
-    width: 100%;
-    position: relative;
-    bottom: 0;
-    margin-top: auto;
-   } 
-  </style>
-  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Gerenciamento de Frota{% endblock %}</title>
+    <!-- Adicione links para seus arquivos CSS aqui -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}"> {# Exemplo de link para seu próprio CSS estático #}
+    {% block extra_css %}{% endblock %} {# Bloco para adicionar CSS extra em templates específicos #}
 </head>
-<body class="d-flex flex-column min-vh-100">
-  
-  <header>
-    <h1 class="op">Gerenciamento de Frota</h1>
-  </header>
-  <div class="container my-4">
-    {% block content %}{% endblock %}
-  </div>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="{% url 'index' %}">Gerenciamento de Frota</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                {% if user.is_authenticated %}
+                    {% if user.is_staff %} {# Links para Administrador #}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard_admin' %}">Dashboard Admin</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_veiculos' %}">Veículos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_motoristas' %}">Motoristas</a>
+                        </li>
+                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_entregas' %}">Entregas</a>
+                        </li>
+                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'lista_manutencoes' %}">Manutenções</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAlertas" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              Alertas
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownAlertas">
+                              <a class="dropdown-item" href="{% url 'alerta_manutencao' %}">Alertas Manutenção</a>
+                              <a class="dropdown-item" href="{% url 'alerta_status' %}">Alertas Status Entregas</a>
+                            </div>
+                        </li>
+                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'mapa_coordenadas' %}">Mapa de Coordenadas</a>
+                        </li>
+                        {# Adicione outros links do Admin aqui #}
+                    {% elif user|is_motorista %} {# Links para Motorista (requer o template tag is_motorista) #}
+                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard_motorista' %}">Dashboard Motorista</a>
+                        </li>
+                        <li class="nav-item">
+                           <a class="nav-link" href="{% url 'minhas_entregas' %}">Minhas Entregas</a>
+                       </li>
+                        <li class="nav-item">
+                           <a class="nav-link" href="{% url 'registrar_abastecimento' %}">Registrar Abastecimento</a>
+                       </li>
+                        <li class="nav-item">
+                           <a class="nav-link" href="{% url 'solicitar_manutencao' %}">Solicitar Manutenção</a>
+                       </li>
+                        {# Adicione outros links do Motorista aqui #}
+                    {% elif user|is_cliente %} {# Links para Cliente (requer o template tag is_cliente) #}
+                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard_cliente' %}">Dashboard Cliente</a>
+                        </li>
+                        <li class="nav-item">
+                           <a class="nav-link" href="{% url 'cadastrar_pedido' %}">Cadastrar Pedido</a>
+                       </li>
+                        <li class="nav-item">
+                           <a class="nav-link" href="{% url 'meus_pedidos' %}">Meus Pedidos</a>
+                       </li>
+                        {# Adicione outros links do Cliente aqui #}
+                    {% endif %}
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav ml-auto">
+                 {% if user.is_authenticated %}
+                     <li class="nav-item">
+                         <span class="navbar-text mr-2">Olá, {{ user.username }}</span>
+                     </li>
+                     <li class="nav-item">
+                         <a class="nav-link" href="{% url 'logout' %}">Sair</a>
+                     </li>
+                 {% else %}
+                      <li class="nav-item">
+                         <a class="nav-link" href="{% url 'login' %}">Entrar</a>
+                     </li>
+                     {# Opcional: link para cadastro de novos usuários #}
+                     {# <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Cadastre-se</a></li> #}
+                 {% endif %}
+            </ul>
+        </div>
+    </nav>
 
-  <footer class ="op">
-    Todos os direitos reservados &copy; 2024
-  </footer>
+    <div class="container mt-5 pt-5"> {# Adicionado padding top para não ficar atrás do navbar fixo #}
+        {% if messages %}
+            <ul class="messages list-unstyled"> {# Usando list-unstyled do Bootstrap #}
+                {% for message in messages %}
+                    <li class="alert {% if message.tags %} alert-{{ message.tags }}{% endif %}" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}
+        <!-- Conteúdo específico de cada página virá aqui -->
+        {% endblock %}
+    </div>
+
+    <footer class="bg-light py-3 mt-4"> {# Usando classes Bootstrap para footer #}
+        <div class="container text-center">Todos os direitos reservados &copy;</div>
+    </footer>
+
+    <!-- Adicione links para seus arquivos JavaScript aqui -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    {% block extra_js %}{% endblock %} {# Bloco para adicionar JS extra em templates específicos #}
 </body>
 </html>

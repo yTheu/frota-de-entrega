@@ -1,43 +1,53 @@
-from django.contrib import admin
 from django.urls import path
+from django.contrib import admin
 from app import views
 
 urlpatterns = [
+    # URLs Públicas ou Gerais
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
     path('teste/', views.test, name='test'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('dashboard/', views.dashboard, name='dashboard'), # Redireciona para o dashboard específico
 
-    # Veículos
-    path('lista_veiculos/', views.listaVeiculos, name='lista_veiculos'),
-    path('veiculos/cadastrar/', views.cadastrarVeiculo, name='cadastrar_veiculo'),
-    path('veiculos/detalhes/<int:id>/', views.det, name='detalhes_veiculo'),
-    path('veiculos/atualizar-km/<int:id>/', views.atualizarKm, name='atualizar_km'),
-    path('veiculos/disponiveis/', views.veiculosDisponiveis, name='veiculos_disponiveis'),
+    # URLs do Administrador
+    path('admin/dashboard/', views.dashboard_admin, name='dashboard_admin'),
+    path('admin/veiculos/', views.lista_veiculos, name='lista_veiculos'),
+    path('admin/veiculos/adicionar/', views.adicionar_veiculo, name='adicionar_veiculo'),
+    path('admin/veiculos/editar/<int:pk>/', views.editar_veiculo, name='editar_veiculo'),
+    path('admin/veiculos/deletar/<int:pk>/', views.deletar_veiculo, name='deletar_veiculo'),
 
-    # Motoristas
-    path('lista_motoristas/', views.listaMotoristas, name='lista_motoristas'),
-    path('motoristas/cadastrar/', views.cadastrarMotorista, name='cadastrar_motorista'),
-    path('motoristas/disponiveis/', views.motoristasDisponiveis, name='motoristas_disponiveis'),
+    path('admin/motoristas/', views.lista_motoristas, name='lista_motoristas'),
+    # path('admin/motoristas/adicionar/', views.adicionar_motorista, name='adicionar_motorista'), # Adicionar depois
+    # path('admin/motoristas/editar/<int:pk>/', views.editar_motorista, name='editar_motorista'), # Adicionar depois
+    # path('admin/motoristas/deletar/<int:pk>/', views.deletar_motorista, name='deletar_motorista'), # Adicionar depois
 
-    # Entregas
-    path('lista_entregas/', views.listaEntregas, name='lista_entregas'),
-    path('entregas/cadastrar/', views.cadastrarEntrega, name='cadastrar_entrega'),
-    path('entregas/iniciar/<int:id>/', views.iniciarEntrega, name='iniciar_entrega'),
-    path('entregas/concluir/', views.concluirEntrega, name='concluir_entrega'),
-    path('entregas/monitorar/<int:id>/', views.monitorarEntrega, name='monitorar_entrega'),
-    path('entregas/atualizar-status/<int:id>/', views.atualizarStatus, name='atualizar_status'),
-    path('entregas/alerta/', views.alertaStatus, name='alerta_status'),
+    path('admin/entregas/', views.lista_entregas, name='lista_entregas'),
+    # path('admin/entregas/editar/<int:pk>/', views.editar_entrega, name='editar_entrega'), # Adicionar depois
+    # path('admin/entregas/deletar/<int:pk>/', views.deletar_entrega, name='deletar_entrega'), # Adicionar depois
 
-    # Manutenção
-    path('lista_manutencoes/', views.listaManutencoes, name='lista_manutencoes'),
-    path('manutencoes/agendar/', views.agendarManutencao, name='agendar_manutencao'),
-    path('manutencoes/realizar/', views.realizarManutencao, name='realizar_manutencao'),
-    path('manutencoes/proxima/<int:id>/', views.proxManutencao, name='proxima_manutencao'),
-    path('manutencoes/verificar/<int:id>/', views.verificarManutencoes, name='verificar_manutencoes'),
-    path('manutencoes/alerta/', views.alertaManutencao, name='alerta_manutencao'),
+    path('admin/manutencoes/', views.lista_manutencoes, name='lista_manutencoes'),
+    # path('admin/manutencoes/editar/<int:pk>/', views.editar_manutencao, name='editar_manutencao'), # Adicionar depois
+    # path('admin/manutencoes/deletar/<int:pk>/', views.deletar_manutencao, name='deletar_manutencao'), # Adicionar depois
 
-    # Coordenadas e Abastecimento
-    path('coordenadas/mapa/', views.coordenadasMapa, name='mapa_coordenadas'),
-    path('coordenadas/atualizar/', views.atualizarCoordenada, name='atualizar_coordenada'),
-    path('abastecer/', views.abastecer, name='abastecer'),
+    path('admin/alertas/manutencao/', views.alerta_manutencao, name='alerta_manutencao'),
+    path('admin/alertas/status/', views.alerta_status, name='alerta_status'),
+    path('admin/mapa_coordenadas/', views.coordenadasMapa, name='mapa_coordenadas'),
+
+
+    # URLs do PerfilMotorista
+    path('motorista/dashboard/', views.dashboard_motorista, name='dashboard_motorista'),
+    path('motorista/abastecimento/registrar/', views.registrar_abastecimento, name='registrar_abastecimento'),
+    path('motorista/manutencao/solicitar/', views.solicitar_manutencao, name='solicitar_manutencao'),
+    path('motorista/minhas_entregas/', views.minhas_entregas, name='minhas_entregas'),
+    path('motorista/minhas_entregas/atualizar_status/<int:pk>/', views.atualizar_status_entrega, name='atualizar_status_entrega'),
+
+
+    # URLs do Cliente
+    path('cliente/dashboard/', views.dashboard_cliente, name='dashboard_cliente'),
+    path('cliente/pedidos/cadastrar/', views.cadastrar_pedido, name='cadastrar_pedido'),
+    path('cliente/meus_pedidos/', views.meus_pedidos, name='meus_pedidos'),
+    path('cliente/meus_pedidos/status/<int:pk>/', views.status_pedido, name='status_pedido'),
+
 ]

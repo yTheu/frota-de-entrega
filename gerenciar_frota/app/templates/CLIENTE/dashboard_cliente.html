@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load user_tags %} {# Carrega as template tags #}
+
+{% block title %}Dashboard do Cliente{% endblock %}
+
+{% block content %}
+<h2>Bem-vindo ao Dashboard do Cliente, {{ user.username }}!</h2>
+
+{# Exemplo de exibição de informações do cliente #}
+{% if cliente %}
+    <p>Empresa: {{ cliente.nome_empresa|default:"Não informado" }}</p> {# Use default para campos opcionais #}
+    <p>Telefone: {{ cliente.telefone|default:"Não informado" }}</p>
+    {# Adicionar mais informações do perfil do cliente aqui #}
+{% endif %}
+
+<h3>Seus Pedidos Recentes:</h3>
+{% if entregas_cadastradas %}
+    <ul class="list-group">
+        {% for pedido in entregas_cadastradas %}
+             <li class="list-group-item">
+                 Pedido #{{ pedido.id }} - Destino: {{ pedido.destino }}
+                 <br> Status: {{ pedido.status }}
+                 <br> Previsto para: {{ pedido.data_fim_prevista }}
+                 <br> <a href="{% url 'status_pedido' pk=pedido.id %}" class="btn btn-sm btn-info mt-2">Ver Status Detalhado</a>
+             </li>
+        {% endfor %}
+    </ul>
+    <p class="mt-3"><a href="{% url 'meus_pedidos' %}" class="btn btn-secondary">Ver Todos os Meus Pedidos</a></p>
+{% else %}
+    <p>Você ainda não cadastrou nenhum pedido.</p>
+{% endif %}
+
+{# Link para cadastrar novo pedido #}
+<div class="mt-4">
+    <a href="{% url 'cadastrar_pedido' %}" class="btn btn-success">Cadastrar Novo Pedido</a>
+</div>
+
+{% endblock %}

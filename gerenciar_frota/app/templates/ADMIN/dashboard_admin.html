@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard do Administrador{% endblock %}
+
+{% block content %}
+<h2>Bem-vindo ao Dashboard do Administrador</h2>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Total de Veículos</h5>
+                <p class="card-text display-4">{{ total_veiculos }}</p>
+                <a href="{% url 'lista_veiculos' %}" class="btn btn-primary">Gerenciar Veículos</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Total de Motoristas</h5>
+                <p class="card-text display-4">{{ total_motoristas }}</p>
+                <a href="{% url 'lista_motoristas' %}" class="btn btn-primary">Gerenciar Motoristas</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Entregas Pendentes</h5>
+                <p class="card-text display-4">{{ total_entregas_pendentes }}</p>
+                <a href="{% url 'lista_entregas' %}" class="btn btn-primary">Gerenciar Entregas</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Adicione mais seções ou links para outras funcionalidades do Admin aqui #}
+
+{% endblock %}

@@ -165,21 +165,18 @@ def deletar_veiculo(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def lista_motoristas(request):
-     """Lista todos os motoristas (acesso apenas para admin)."""
      motoristas = PerfilMotorista.objects.all()
      return render(request, 'MOTORISTAS/listaMotoristas.html', {'motoristas': motoristas})
 
 @login_required
 @user_passes_test(is_admin)
 def lista_entregas(request):
-     """Lista todas as entregas (acesso apenas para admin)."""
      entregas = Entrega.objects.all()
      return render(request, 'ENTREGAS/listaEntregas.html', {'entregas': entregas})
 
 @login_required
 @user_passes_test(is_admin)
 def lista_manutencoes(request):
-    """Lista todas as manutenções (acesso apenas para admin)."""
     manutencoes = Manutencao.objects.all()
     return render(request, 'MANUTENCAO/listaManutencoes.html', {'manutencoes': manutencoes})
 
@@ -209,7 +206,6 @@ def alerta_status(request):
 @login_required
 @user_passes_test(is_admin)
 def coordenadasMapa(request):
-    """Mapa de coordenadas (acesso apenas para admin)."""
     coordenadas = Coordenada.objects.all()
     return render(request, 'ENTREGAS/coordenadasMapa.html', {'coordenadas': coordenadas})
 
@@ -225,14 +221,23 @@ def is_motorista(user):
 @login_required
 @user_passes_test(is_motorista) #acesso só dos motoristas
 def dashboard_motorista(request):
-    """Dashboard do PerfilMotorista."""
     motorista_perfil = request.user.perfilmotorista
-    entregas_atribuidas = Entrega.objects.filter(motorista=motorista_perfil)
+    def _motorista_veiculo_obj(motorista):
+        veiculo_str = motorista.veiculoAtual
+        if not veiculo_str:
+            return None
+        try:
+            return Veiculo.objects.filter(placa__iexact=veiculo_str).first() or Veiculo.objects.filter(modelo__iexact=veiculo_str).first()
+        except Exception:
+            return None
 
-    return render(request, 'MOTORISTA/dashboard_motorista.html', {
-        'motorista': motorista_perfil,
-        'entregas_atribuidas': entregas_atribuidas,
-    })
+    veiculo_atual = _motorista_veiculo_obj(motorista_perfil)
+    if veiculo_atual:
+        entregas_atribuidas = Entrega.objects.filter(veiculo=veiculo_atual)
+    else:
+        entregas_atribuidas = Entrega.objects.none()
+
+    return render(request, 'MOTORISTA/dashboard_motorista.html', {'motorista': motorista_perfil, 'entregas_atribuidas': entregas_atribuidas,})
 
 @login_required
 @user_passes_test(is_motorista)
@@ -274,14 +279,24 @@ def solicitar_manutencao(request):
 @user_passes_test(is_motorista)
 def minhas_entregas(request):
     motorista_perfil = request.user.perfilmotorista
-    entregas = Entrega.objects.filter(motorista=motorista_perfil) 
+    veiculo_atual = None
+    if motorista_perfil.veiculoAtual:
+        veiculo_atual = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
+    if veiculo_atual:
+        entregas = Entrega.objects.filter(veiculo=veiculo_atual)
+    else:
+        entregas = Entrega.objects.none()
     return render(request, 'MOTORISTA/minhasEntregas.html', {'entregas': entregas})
 
 @login_required
 @user_passes_test(is_motorista)
 def atualizar_status_entrega(request, pk):
     entrega = get_object_or_404(Entrega, pk=pk)
-    if entrega.motorista != request.user.perfilmotorista:
+    motorista_perfil = request.user.perfilmotorista
+    veiculo_atual = None
+    if motorista_perfil.veiculoAtual:
+        veiculo_atual = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
+    if not veiculo_atual or entrega.veiculo != veiculo_atual:
         messages.error(request, 'Você não tem permissão para atualizar esta entrega.')
         return redirect('minhas_entregas')
 

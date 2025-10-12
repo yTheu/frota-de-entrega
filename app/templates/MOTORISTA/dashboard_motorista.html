@@ -6,10 +6,8 @@
 {% block content %}
 <h2>Bem-vindo ao Dashboard do Motorista, {{ user.username }}!</h2>
 
-{# Exemplo de exibição de informações do motorista #}
 {% if motorista %}
     <p>CNH: {{ motorista.cnh }}</p>
-    {# Adicionar mais informações do perfil do motorista aqui, como veículo atual #}
     {# {% if motorista.veiculo_atual %}<p>Veículo Atual: {{ motorista.veiculo_atual.placa }} - {{ motorista.veiculo_atual.modelo }}</p>{% endif %} #}
 {% endif %}
 
@@ -17,7 +15,6 @@
 {% if entregas_atribuidas %}
     <ul class="list-group">
         {% for entrega in entregas_atribuidas %}
-            {# Exibir informações importantes sobre a entrega #}
             <li class="list-group-item">
                 Entrega #{{ entrega.id }} - Origem: {{ entrega.origem }} - Destino: {{ entrega.destino }}
                 <br> Status: {{ entrega.status }}

@@ -47,10 +47,6 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    """
-    View que redireciona o usuário para o dashboard apropriado
-    com base no seu tipo (Administrador, PerfilMotorista, Cliente).
-    """
     user = request.user
     if user.is_staff:
         return redirect('dashboard_admin')

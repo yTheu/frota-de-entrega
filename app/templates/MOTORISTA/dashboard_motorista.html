@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load user_tags %} {# Carrega as template tags para verificar o tipo de usuário #}
+
+{% block title %}Dashboard do Motorista{% endblock %}
+
+{% block content %}
+<h2>Bem-vindo ao Dashboard do Motorista, {{ user.username }}!</h2>
+
+{# Exemplo de exibição de informações do motorista #}
+{% if motorista %}
+    <p>CNH: {{ motorista.cnh }}</p>
+    {# Adicionar mais informações do perfil do motorista aqui, como veículo atual #}
+    {# {% if motorista.veiculo_atual %}<p>Veículo Atual: {{ motorista.veiculo_atual.placa }} - {{ motorista.veiculo_atual.modelo }}</p>{% endif %} #}
+{% endif %}
+
+<h3>Suas Próximas Entregas:</h3>
+{% if entregas_atribuidas %}
+    <ul class="list-group">
+        {% for entrega in entregas_atribuidas %}
+            {# Exibir informações importantes sobre a entrega #}
+            <li class="list-group-item">
+                Entrega #{{ entrega.id }} - Origem: {{ entrega.origem }} - Destino: {{ entrega.destino }}
+                <br> Status: {{ entrega.status }}
+                <br> Prevista para: {{ entrega.data_fim_prevista }}
+                <br> <a href="{% url 'atualizar_status_entrega' pk=entrega.id %}" class="btn btn-sm btn-info mt-2">Atualizar Status</a>
+                 {# Opcional: link para ver detalhes completos da entrega #}
+                 {# <a href="{% url 'detalhes_entrega_motorista' pk=entrega.id %}" class="btn btn-sm btn-secondary mt-2">Detalhes</a> #}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>Nenhuma entrega atribuída no momento.</p>
+{% endif %}
+
+{# Links rápidos para funcionalidades do motorista #}
+<div class="mt-4">
+    <a href="{% url 'registrar_abastecimento' %}" class="btn btn-primary mr-2">Registrar Abastecimento</a>
+    <a href="{% url 'solicitar_manutencao' %}" class="btn btn-secondary">Solicitar Manutenção</a>
+</div>
+
+{% endblock %}

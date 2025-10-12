@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Alertas de Manutenção</title>
+</head>
+<body>
+    <h1>Veículos que Precisam de Manutenção</h1>
+
+    {% if veiculos %}
+        <ul>
+            {% for veiculo in veiculos %}
+                <li>{{ veiculo.placa }} - {{ veiculo.modelo }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Nenhum veículo precisa de manutenção no momento.</p>
+    {% endif %}
+
+    <a href="{% url 'index' %}">Voltar</a>
+</body>
+</html>

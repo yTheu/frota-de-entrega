@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h2>Login</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }} {# Renderiza o formulário como parágrafos #}
+    <button type="submit" class="btn btn-primary">Entrar</button>
+</form>
+
+{# Opcional: Links para recuperação de senha, cadastro, etc. #}
+{# <p><a href="{% url 'password_reset' %}">Esqueceu sua senha?</a></p> #}
+{# <p><a href="{% url 'register' %}">Não tem uma conta? Cadastre-se</a></p> #}
+
+{% endblock %}

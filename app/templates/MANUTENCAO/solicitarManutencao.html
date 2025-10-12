@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Solicitar Manutenção{% endblock %}
+
+{% block content %}
+<h2>Solicitar Manutenção</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Enviar solicitação</button>
+    <a class="btn btn-secondary" href="{% url 'dashboard_motorista' %}">Cancelar</a>
+</form>
+{% endblock %}

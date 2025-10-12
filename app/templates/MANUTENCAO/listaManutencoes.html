@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de Manutenções{% endblock %}
+
+{% block content %}
+<h2>Lista de Manutenções</h2>
+
+{% if manutencoes %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Veículo</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in manutencoes %}
+            <tr>
+                <td>{{ m.id }}</td>
+                <td>{{ m.veiculo }}</td>
+                <td>{{ m.get_tipo_display }}</td>
+                <td>{{ m.data }}</td>
+                <td>{{ m.get_status_display }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Nenhuma manutenção encontrada.</p>
+{% endif %}
+
+<a class="btn btn-primary" href="{% url 'dashboard_admin' %}">Voltar ao Dashboard</a>
+{% endblock %}

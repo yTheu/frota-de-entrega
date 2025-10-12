@@ -1,33 +1,56 @@
 from django import forms
-from .models import Veiculo, Motorista, Entrega, Manutencao, Abastecimento, Coordenada
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.models import User
+from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilCliente
+
+class LoginForm(AuthenticationForm):
+    #vou fazer manualmente
+    pass
 
 class VeiculoForm(forms.ModelForm):
     class Meta:
         model = Veiculo
-        fields = ['placa', 'modelo','km', 'autonomia', 'ultimaManutencao', 'disponivel']
+        fields = ['placa', 'modelo', 'km', 'autonomia', 'ultimaManutencao', 'status']
+        widgets = {
+            'ultimaManutencao': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class MotoristaForm(forms.ModelForm):
     class Meta:
-        model = Motorista
-        fields = ['cpf', 'nome', 'num_cnh', 'veiculoAtual', 'disponivel']
+        model = PerfilMotorista
+        fields = ['nome', 'cpf', 'num_cnh', 'veiculoAtual', 'disponivel']
 
 class EntregaForm(forms.ModelForm):
     class Meta:
         model = Entrega
-        fields = ['origem', 'destino', 'status', 'veiculo']
+        fields = ['origem', 'destino', 'data_inicio_prevista', 'data_fim_prevista']
+        widgets = {
+            'data_inicio_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'data_fim_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
 
 class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao
         fields = ['veiculo', 'tipo', 'descricao', 'data', 'custo', 'status']
+        widgets = {
+            'data': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class AbastecimentoForm(forms.ModelForm):
     class Meta:
         model = Abastecimento
         fields = ['litros', 'custo', 'dataAbastecimento', 'veiculo']
+        widgets = {
+            'dataAbastecimento': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class CoordenadaForm(forms.ModelForm):
     class Meta:
         model = Coordenada
         fields = ['latitude', 'longitude']
 
+class PerfilClienteForm(forms.ModelForm):
+    class Meta:
+        model = PerfilCliente
+        fields = ['nome_empresa', 'endereco', 'telefone']

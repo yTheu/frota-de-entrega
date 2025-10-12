@@ -15,6 +15,8 @@ from django.contrib.auth.models import Group
 
 # ------------------Sistema (Views Públicas ou Gerais)-------------------------------------------------------------------------
 
+#dps desse projeto, quero distância desse vscode 
+
 def index(request):
     return render(request, 'index.html')
 

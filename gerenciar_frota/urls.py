@@ -25,6 +25,7 @@ urlpatterns = [
     # path('admin/motoristas/deletar/<int:pk>/', views.deletar_motorista, name='deletar_motorista'), #depois adiciono
 
     path('admin/entregas/', views.lista_entregas, name='lista_entregas'),
+    path('admin/entregas/adicionar', views.cadastrar_pedido, name='cadastrar_pedido'),
     # path('admin/entregas/editar/<int:pk>/', views.editar_entrega, name='editar_entrega'), #depois adiciono
     # path('admin/entregas/deletar/<int:pk>/', views.deletar_entrega, name='deletar_entrega'), #depois adiciono
 

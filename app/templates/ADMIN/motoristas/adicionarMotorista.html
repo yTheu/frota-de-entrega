@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Registrar Motorista (Admin)</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <h3>Conta</h3>
+    {{ user_form.as_p }}
+
+    <h3>Dados do Motorista</h3>
+    {{ motorista_form.as_p }}
+
+    <button type="submit">Criar Motorista</button>
+  </form>
+
+  <p><a href="{% url 'lista_motoristas' %}">Voltar para lista de motoristas</a></p>
+{% endblock %}

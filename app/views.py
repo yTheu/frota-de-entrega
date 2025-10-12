@@ -112,7 +112,7 @@ def lista_veiculos(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'VEICULOS/listaVeiculos.html', {
+    return render(request, 'ADMIN/veiculos/listaVeiculos.html', {
         'veiculos': page_obj,
         'page_obj': page_obj,
         'q': q,
@@ -134,7 +134,7 @@ def adicionar_veiculo(request):
             return redirect('lista_veiculos')
     else:
         form = VeiculoForm()
-    return render(request, 'VEICULOS/adicionarVeiculo.html', {'form': form})
+    return render(request, 'ADMIN/veiculos/adicionarVeiculo.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -148,7 +148,7 @@ def editar_veiculo(request, pk):
             return redirect('lista_veiculos')
     else:
         form = VeiculoForm(instance=veiculo)
-    return render(request, 'VEICULOS/editarVeiculo.html', {'form': form, 'veiculo': veiculo})
+    return render(request, 'ADMIN/veiculos/editarVeiculo.html', {'form': form, 'veiculo': veiculo})
 
 @login_required
 @user_passes_test(is_admin)
@@ -158,25 +158,57 @@ def deletar_veiculo(request, pk):
         veiculo.delete()
         messages.success(request, 'Veículo excluído com sucesso!')
         return redirect('lista_veiculos')
-    return render(request, 'VEICULOS/confirmarDeletarVeiculo.html', {'veiculo': veiculo})
+    return render(request, 'ADMIN/veiculos/confirmarDeletarVeiculo.html', {'veiculo': veiculo})
 
 @login_required
 @user_passes_test(is_admin)
 def lista_motoristas(request):
      motoristas = PerfilMotorista.objects.all()
-     return render(request, 'MOTORISTAS/listaMotoristas.html', {'motoristas': motoristas})
+     return render(request, 'ADMIN/motoristas/listaMotoristas.html', {'motoristas': motoristas})
 
 @login_required
 @user_passes_test(is_admin)
 def lista_entregas(request):
-     entregas = Entrega.objects.all()
-     return render(request, 'ENTREGAS/listaEntregas.html', {'entregas': entregas})
+    entregas_lista = Entrega.objects.select_related('cliente', 'veiculo', 'motorista').all()
+    filtrar_status = request.GET.get('status', '')
+    busca = request.GET.get('q', '')
+
+    if filtrar_status:
+        entregas_lista = entregas_lista.filter(status=filtrar_status)
+
+    if busca:
+        entregas_lista = entregas_lista.filter(Q(cliente__nome_empresa__icontains=busca)|Q(veiculo__placa__icontains=busca)|Q(motorista__user__first_name__icontains=busca))
+
+    ordenar = request.GET.get('ordenar', '-data_inicio_prevista')
+
+    dados_ordenacao = [
+        'data_inicio_prevista', '-data_inicio_prevista',
+        'status', '-status',
+        'cliente_nome_empresa', '-cliente_nome_empresa'
+    ]
+
+    if ordenar in dados_ordenacao:
+        entregas_lista = entregas_lista.order_by(ordenar)
+
+    total_por_pagina = Paginator(entregas_lista, 15)
+    num_pagina = request.GET.get('page')
+    pagina_obj = total_por_pagina.get_page(num_pagina)
+
+    contexto = {
+        'entregas': pagina_obj,
+        'status_choices': Entrega.STATUS_ENTREGA,
+        'current_status': filtrar_status,
+        'current_query': busca,
+        'current_sort': ordenar,
+    }
+
+    return render(request, 'ADMIN/entregas/listaEntregas.html', contexto)
 
 @login_required
 @user_passes_test(is_admin)
 def lista_manutencoes(request):
     manutencoes = Manutencao.objects.all()
-    return render(request, 'MANUTENCAO/listaManutencoes.html', {'manutencoes': manutencoes})
+    return render(request, 'ADMIN/manutencoes/listaManutencoes.html', {'manutencoes': manutencoes})
 
 @login_required
 @user_passes_test(is_admin)
@@ -189,7 +221,7 @@ def alerta_manutencao(request):
 
     veiculos_alerta = (veiculos_alerta_km | veiculos_alerta_dias).distinct()
 
-    return render(request, 'MANUTENCAO/alertaManutencao.html', {'veiculos_alerta': veiculos_alerta})
+    return render(request, 'ADMIN/manutencoes/alertaManutencao.html', {'veiculos_alerta': veiculos_alerta})
 
 @login_required
 @user_passes_test(is_admin)
@@ -198,14 +230,14 @@ def alerta_status(request):
         data_fim_prevista__lt=timezone.now(),
         status__in=['PENDENTE', 'EM_ROTA']
     )
-    return render(request, 'ENTREGAS/alertaStatus.html', {'entregas_atrasadas': entregas_atrasadas})
+    return render(request, 'ADMIN/entregas/alertaStatus.html', {'entregas_atrasadas': entregas_atrasadas})
 
 
 @login_required
 @user_passes_test(is_admin)
 def coordenadasMapa(request):
     coordenadas = Coordenada.objects.all()
-    return render(request, 'ENTREGAS/coordenadasMapa.html', {'coordenadas': coordenadas})
+    return render(request, 'ADMIN/entregas/coordenadasMapa.html', {'coordenadas': coordenadas})
 
 
 # ------------------Views do PerfilMotorista-------------------------------------------------------------------------
@@ -246,13 +278,16 @@ def registrar_abastecimento(request):
             abastecimento = form.save(commit=False)
             motorista_perfil = request.user.perfilmotorista
             abastecimento.motorista = motorista_perfil
-            abastecimento.veiculo = motorista_perfil.veiculoAtual
+            veiculo_obj = None
+            if motorista_perfil.veiculoAtual:
+                veiculo_obj = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
+            abastecimento.veiculo = veiculo_obj
             abastecimento.save()
             messages.success(request, 'Abastecimento registrado com sucesso!')
             return redirect('dashboard_motorista')
     else:
         form = AbastecimentoForm()
-    return render(request, 'ABASTECIMENTO/registrarAbastecimento.html', {'form': form})
+    return render(request, 'MOTORISTA/abastecer.html', {'form': form})
 
 
 @login_required
@@ -264,26 +299,24 @@ def solicitar_manutencao(request):
             solicitacao = form.save(commit=False)
             motorista_perfil = request.user.perfilmotorista
             solicitacao.motorista = motorista_perfil
-            solicitacao.veiculo = motorista_perfil.veiculoAtual
+            veiculo_obj = None
+            if motorista_perfil.veiculoAtual:
+                veiculo_obj = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
+            solicitacao.veiculo = veiculo_obj
             solicitacao.status = 'SOLICITADA'
             solicitacao.save()
             messages.success(request, 'Solicitação de manutenção enviada com sucesso!')
             return redirect('dashboard_motorista')
     else:
         form = ManutencaoForm()
-    return render(request, 'MANUTENCAO/solicitarManutencao.html', {'form': form})
+    return render(request, 'MOTORISTA/solicitarManutencao.html', {'form': form})
 
 @login_required
 @user_passes_test(is_motorista)
 def minhas_entregas(request):
     motorista_perfil = request.user.perfilmotorista
-    veiculo_atual = None
-    if motorista_perfil.veiculoAtual:
-        veiculo_atual = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
-    if veiculo_atual:
-        entregas = Entrega.objects.filter(veiculo=veiculo_atual)
-    else:
-        entregas = Entrega.objects.none()
+
+    entregas = Entrega.objects.filter(motorista=motorista_perfil, status__in=['ALOCADA', 'EM_ROTA']).select_related('veiculo', 'cliente', 'origem', 'destino').order_by('data_inicio_prevista')
     return render(request, 'MOTORISTA/minhasEntregas.html', {'entregas': entregas})
 
 @login_required
@@ -340,11 +373,18 @@ def cadastrar_pedido(request):
             entrega.cliente = request.user.perfilcliente
             entrega.status = 'PENDENTE'
             entrega.save()
-            messages.success(request, 'Pedido cadastrado com sucesso! Aguardando alocação.')
+
+            success, message = Entrega.objects.atribuir_entrega_automatica(entrega)
+
+            if success:
+                messages.success(request, f'Ótima notícia! Seu pedido foi cadastrado e já alocado. {message}')
+            else:
+                messages.info(request, 'Pedido cadastrado com sucesso! Nosso sistema já está buscando o melhor veículo para sua entrega.')
             return redirect('dashboard_cliente')
     else:
         form = EntregaForm()
-    return render(request, 'CLIENTE/cadastrarPedido.html', {'form': form})
+
+    return render(request, 'CLIENTE/cadastrarEntrega.html', {'form': form})
 
 @login_required
 @user_passes_test(is_cliente)
@@ -417,7 +457,7 @@ def register_motorista(request):
     else:
         user_form = UserCreationForm()
         motorista_form = MotoristaForm()
-    return render(request, 'MOTORISTAS/register_motorista.html', {
+    return render(request, 'ADMIN/motoristas/adicionarMotorista.html', {
         'user_form': user_form,
         'motorista_form': motorista_form,
     })

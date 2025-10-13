@@ -24,10 +24,10 @@ class EntregaManager(models.Manager):
                 
                 entrega.veiculo = best_vehicle
                 entrega.motorista = best_driver
-                entrega.status = 'ALOCADA'
+                entrega.status = 'EM_SEPARACAO'
                 entrega.save()
 
-                best_vehicle.status = 'EM_USO'
+                best_vehicle.status = 'EM_ENTREGA'
                 best_vehicle.save()
         
             msg = f"Atribuído ao motorista {best_driver.user.get_full_name()} com o veículo {best_vehicle.placa}."
@@ -73,7 +73,7 @@ class PerfilMotorista(models.Model):
     nome = models.CharField(max_length=100)
     cpf = models.CharField(max_length=14, unique=True)
     num_cnh = models.CharField(max_length=20, unique=True)
-    veiculoAtual = models.CharField(max_length=50, blank=True, null=True)
+    veiculoAtual = models.ForeignKey('Veiculo', on_delete=models.CASCADE)
     disponivel = models.BooleanField(default=True)
 
     def __str__(self):
@@ -84,10 +84,6 @@ class Manutencao(models.Model):
         ("PREVENTIVA", 'Preventiva'),
         ("CORRETIVA", 'Corretiva'),
     ]
-    STATUS_MANUTENCAO = [
-        ("PENDENTE", "Pendente"),
-        ("CONCLUIDA", "Concluída"),
-    ] 
 
     veiculo = models.ForeignKey('Veiculo', on_delete=models.CASCADE)
     motorista = models.ForeignKey('PerfilMotorista', on_delete=models.SET_NULL, null=True, blank=True)
@@ -100,9 +96,7 @@ class Manutencao(models.Model):
         ("PENDENTE", "Pendente"),
         ("CONCLUIDA", "Concluída"),
     ]
-    status = models.CharField(max_length=20, default="PENDENTE", choices=STATUS_MANUTENCAO)
-    
-   
+    status = models.CharField(max_length=20, default="PENDENTE", choices=STATUS_MANUTENCAO)   
 
     def __str__(self):
         return f"{self.get_tipo_display()} - {self.veiculo.modelo} ({self.data})"
@@ -140,6 +134,7 @@ class Entrega(models.Model):
         choices=STATUS_ENTREGA,
         default="PENDENTE"
     )
+    
     veiculo = models.ForeignKey('Veiculo', on_delete=models.SET_NULL, null=True, blank=True)
     motorista = models.ForeignKey('PerfilMotorista', on_delete=models.SET_NULL, null=True, blank=True)
     cliente = models.ForeignKey(PerfilCliente, on_delete=models.SET_NULL, null=True, blank=True)

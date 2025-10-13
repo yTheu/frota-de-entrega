@@ -157,9 +157,9 @@ def deletar_veiculo(request, pk):
     if request.method == 'POST':
         veiculo.delete()
         messages.success(request, 'Veículo excluído com sucesso!')
-        return redirect('lista_veiculos')
-    return render(request, 'ADMIN/veiculos/confirmarDeletarVeiculo.html', {'veiculo': veiculo})
-
+    
+    return redirect('lista_veiculos')
+    
 @login_required
 @user_passes_test(is_admin)
 def lista_motoristas(request):

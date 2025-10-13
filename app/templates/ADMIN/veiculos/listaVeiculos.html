@@ -44,7 +44,13 @@
                     <td>{{ v.get_status_display }}</td>
                     <td>
                         <a href="{% url 'editar_veiculo' v.pk %}">Editar</a> |
-                        <a href="{% url 'deletar_veiculo' v.pk %}">Excluir</a>
+                        
+                        <form action="{% url 'deletar_veiculo' v.pk %}" method="POST" style="display: inline;">
+                            {% csrf_token %}
+                            <button type-="submit" class="btn btn-link text-danger p-0">
+                                Excluir
+                            </button>
+                        </form>
                     </td>
                 </tr>
             {% endfor %}

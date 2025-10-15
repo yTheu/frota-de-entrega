@@ -1,45 +1,41 @@
-import threading, time, random
-from .models import Veiculo, Entrega, Coordenada
+# seu_app/threads.py
+import time
+from django.db import connections
+from .models import Rota
 
-class VeiculoThread(threading.Thread):
-    def criar_entrega():
-        pass
+def executar_rota_em_thread(rota_id):
+    connections.close_all()
+    
+    try:
+        rota = Rota.objects.get(id=rota_id)
+    except Rota.DoesNotExist:
+        print(f"[Thread] Erro: Rota {rota_id} não encontrada.")
+        return
 
-    def simular_entrega(veiculo_id, entrega_id):
-        try:
-            veiculo = Veiculo.objects.get(id=veiculo_id)
-            entrega = Entrega.objects.get(id=entrega_id)
-            #print("passou aq")
+    print(f"[Thread da Rota #{rota.id}] Executando plano. Duração estimada: {rota.duracao_estimada_minutos} min.")
 
-        except (Veiculo.DoesNotExist, Entrega.DoesNotExist):
-            print("Erro! Veículo ou entrega não encontrado")
-            return
-        
-        print(f"Simulação com veículo {veiculo.placa}")
+    rota.status = 'EM_ROTA'
+    rota.data_inicio_real = time.timezone.now()
+    rota.save()
+    rota.veiculo.status = 'EM_ENTREGA'
+    rota.veiculo.save()
+    rota.motorista.disponivel = False
+    rota.motorista.save()
+    rota.entregas.all().update(status='EM_ROTA')
+    
+    if rota.duracao_estimada_minutos:
+        tempo_real_de_simulacao_segundos = rota.duracao_estimada_minutos
+    else:
+        tempo_real_de_simulacao_segundos = 15
 
-        origem = entrega.origem
-        destino = entrega.destino
-        latitude = origem.latitude
-        longitude = origem.longitude
-        
-        print(f"{origem} -> {destino}")
-        print(f"Latitude atual: {latitude}")
-        print(f"Logitude atual: {longitude}")
+    # Futuramente, em vez de um sleep único, você pode iterar sobre os waypoints
+    # salvos no 'dados_trajeto_json' e dar um sleep proporcional entre cada um,
+    # atualizando a 'localizacao_atual' do veículo a cada passo.
+    
+    print(f"[Thread da Rota #{rota.id}] Trajeto em andamento... (simulação levará {tempo_real_de_simulacao_segundos:.1f}s)")
+    time.sleep(tempo_real_de_simulacao_segundos)
 
-        entrega.status = "EM_ROTA"
-        entrega.save()
-
-        veiculo.status_veiculo = "EM_ENTREGA"
-        veiculo.save()
-
-        #simular o deslocamento
-        for i in range(10):
-            latitude += (destino.latitude - latitude) * 0.5
-            longitude += (destino.longitude - longitude) * 0.5
-
-            Coordenada.objects.create(latitude, longitude)
-            print("Atualizando...")
-            print(f"Latitude atual: {latitude}")
-            print(f"Logitude atual: {longitude}")
-
-            time.sleep(1)
+    print(f"[Thread da Rota #{rota.id}] Rota finalizada.")
+    rota.status = 'CONCLUIDA'
+    rota.data_fim_real = time.timezone.now()
+    rota.save()

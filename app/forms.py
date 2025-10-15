@@ -18,17 +18,13 @@ class VeiculoForm(forms.ModelForm):
 class MotoristaForm(forms.ModelForm):
     class Meta:
         model = PerfilMotorista
-        fields = ['nome', 'cpf', 'num_cnh', 'veiculoAtual', 'disponivel']
+        fields = ['nome', 'cpf', 'num_cnh', 'disponivel']
 
 class EntregaForm(forms.ModelForm):
     class Meta:
         model = Entrega
-        fields = ['origem', 'destino', 'data_inicio_prevista', 'data_fim_prevista']
-        widgets = {
-            'data_inicio_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'data_fim_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-        }
-
+        fields = ['origem', 'destino']
+        
 class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao

@@ -169,7 +169,7 @@ def lista_motoristas(request):
 @login_required
 @user_passes_test(is_admin)
 def lista_entregas(request):
-    entregas_lista = Entrega.objects.select_related('cliente', 'veiculo', 'motorista').all()
+    entregas_lista = Entrega.objects.select_related('cliente', 'rota__veiculo', 'rota__motorista').all()
     filtrar_status = request.GET.get('status', '')
     busca = request.GET.get('q', '')
 
@@ -177,12 +177,12 @@ def lista_entregas(request):
         entregas_lista = entregas_lista.filter(status=filtrar_status)
 
     if busca:
-        entregas_lista = entregas_lista.filter(Q(cliente__nome_empresa__icontains=busca)|Q(veiculo__placa__icontains=busca)|Q(motorista__user__first_name__icontains=busca))
+        entregas_lista = entregas_lista.filter(Q(cliente__nome_empresa__icontains=busca)|Q(rota__veiculo__placa__icontains=busca)|Q(rota__motorista__nome__icontains=busca))
 
-    ordenar = request.GET.get('ordenar', '-data_inicio_prevista')
+    ordenar = request.GET.get('ordenar', '-id')
 
     dados_ordenacao = [
-        'data_inicio_prevista', '-data_inicio_prevista',
+        'rota__data_inicio_prevista', '-rota__data_inicio_prevista',
         'status', '-status',
         'cliente_nome_empresa', '-cliente_nome_empresa'
     ]

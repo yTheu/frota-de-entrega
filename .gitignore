@@ -1,0 +1,33 @@
+# Arquivo de Variáveis de Ambiente
+.env
+
+# Ambiente Virtual Python
+# Ignora a pasta venv, independente de onde ela esteja
+venv/
+env/
+*/env/
+*/venv/
+.venv/
+
+# Banco de dados local
+*.sqlite3
+db.sqlite3
+
+# Arquivos de cache e compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de IDE e editores de código
+.vscode/
+.idea/
+
+# Arquivos gerados pelo Django
+# Pastas para onde os arquivos de media e estáticos são coletados
+media/
+staticfiles/
+*.log
+
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db

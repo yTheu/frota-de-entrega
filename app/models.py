@@ -5,37 +5,44 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-class EntregaManager(models.Manager):
-    def atribuir_entrega_automatica(self, entrega):
-        if entrega.status != 'PENDENTE':
-            return (False, "A entrega não está pendente.")
+class RotaManager(models.Manager):
+    def criar_rota(self, ids_entregas, dados_api):
+        if not ids_entregas:
+            return (False, "Nenhuma entrega selecionada.")
         try:
-            with transaction.atomic():
-                veiculos_disponiveis = Veiculo.objects.select_for_update().filter(status='DISPONIVEL')
-            
-                motoristas_disponiveis = PerfilMotorista.objects.all()
+            with transaction.atomic(): #procura por motoristas e veiculos livres
+                veiculo_disponivel = Veiculo.objects.select_for_update().filter(status='DISPONIVEL').first()
+                motorista_disponivel = PerfilMotorista.objects.select_for_update().filter(disponivel=True).first()
 
-                #dps colocar os parâmetros de decisão 
-                best_vehicle = veiculos_disponiveis.first()
-                best_driver = motoristas_disponiveis.first()
-
-                if not best_vehicle or not best_driver:
-                    return (False, "Nenhum veículo ou motorista compatível encontrado.")
+                if not veiculo_disponivel or not motorista_disponivel:
+                    return (False, "Nenhum veículo ou motorista disponível no momento.")
                 
-                entrega.veiculo = best_vehicle
-                entrega.motorista = best_driver
-                entrega.status = 'EM_SEPARACAO'
-                entrega.save()
+                inicio_previsto = timezone.now() + timezone.timedelta(minutes=15)
+                fim_previsto = inicio_previsto + timezone.timedelta(minutes=dados_api['duracao_minutos'])
 
-                best_vehicle.status = 'EM_ENTREGA'
-                best_vehicle.save()
-        
-            msg = f"Atribuído ao motorista {best_driver.user.get_full_name()} com o veículo {best_vehicle.placa}."
-            return (True, msg)
-            
+                #cria rota
+                nova_rota = self.model.objects.create(
+                    veiculo=veiculo_disponivel,
+                    motorista=motorista_disponivel,
+                    status='PLANEJADA',
+                    distancia_total_km=dados_api['distancia_km'],
+                    duracao_estimada_minutos=dados_api['duracao_minutos'],
+                    data_inicio_prevista=inicio_previsto,
+                    data_fim_prevista=fim_previsto
+                )
+
+                #associa entregas à rota
+                entregas_alocar = Entrega.objects.filter(id__in=ids_entregas, status='PENDENTE')
+                if not entregas_alocar.exists():
+                    raise Exception("Entregas selecionadas não estão mais disponíveis para alocação.")
+                
+                entregas_alocar.update(rota=nova_rota, status='EM_SEPARACAO')
+
+                msg = f"Rota #{nova_rota.id} criada com {entregas_alocar.count()} entregas. Distância: {nova_rota.distancia_total_km} km."
+                return (True, msg)
+
         except Exception as e:
-            return (False, f"Ocorreu um erro de concorrência ou de banco de dados: {e}")
-
+            return (False, f"Erro ao criar a rota: {e}")
 
 class PerfilCliente(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -47,23 +54,27 @@ class PerfilCliente(models.Model):
         return f'Perfil de Cliente para {self.user.username}'
 
 class Veiculo(models.Model):
-    placa = models.CharField(max_length=10, unique=True)
-    modelo = models.CharField(max_length=100)
-    km = models.PositiveIntegerField()
-    autonomia = models.DecimalField(max_digits=5, decimal_places=2)
-    ultimaManutencao = models.DateField()
     status_veiculo = [
         ('DISPONIVEL', 'Disponível'),
         ('EM_ENTREGA', 'Em Entrega'),
         ('EM_MANUTENCAO', 'Em Manutenção')
     ]
+
+    placa = models.CharField(max_length=10, unique=True)
+    modelo = models.CharField(max_length=100)
+    km = models.PositiveIntegerField()
+    autonomia = models.DecimalField(max_digits=5, decimal_places=2)
+    ultimaManutencao = models.DateField()
     status = models.CharField(max_length=15, choices=status_veiculo, default='DISPONIVEL')
+    localizacao_atual = models.ForeignKey('Coordenada', on_delete=models.SET_NULL, null=True, blank=True)
     
+    #preventiva
     def precisa_manutencao(self):
         if not self.ultimaManutencao:
             return True
-        else:
-            return(timezone.now().date() - self.ultimaManutencao).days - 100 #valor qlqr por enquanto
+        
+        dias_desde_manutencao = (timezone.now().date() - self.ultimaManutencao).days
+        return dias_desde_manutencao > 180 #a cada 6 meses
 
     def __str__(self):
         return f"{self.modelo} ({self.placa})"
@@ -73,11 +84,33 @@ class PerfilMotorista(models.Model):
     nome = models.CharField(max_length=100)
     cpf = models.CharField(max_length=14, unique=True)
     num_cnh = models.CharField(max_length=20, unique=True)
-    veiculoAtual = models.ForeignKey('Veiculo', on_delete=models.CASCADE)
     disponivel = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.nome} ({'Disponível' if self.disponivel else 'Indisponível'})"
+        return self.nome
+
+class Rota(models.Model):
+    status_rota = [
+        ('PLANEJADA', 'Planejada'),
+        ('EM_ROTA', 'Em Rota'),
+        ('CONCLUIDA', 'Concluída'),
+        ('CANCELADA', 'Cancelada')
+    ]
+
+    distancia_total_km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    duracao_estimada_minutos = models.PositiveIntegerField(null=True, blank=True)
+
+    veiculo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, related_name='rotas')
+    motorista = models.ForeignKey(PerfilMotorista, on_delete=models.PROTECT, related_name='rotas')
+    status = models.CharField(max_length=20, choices=status_rota, default='PLANEJADA')
+
+    data_inicio_prevista = models.DateTimeField(null=True, blank=True)
+    data_fim_prevista = models.DateTimeField(null=True, blank=True)    
+
+    objects = RotaManager()
+
+    def __str__(self):
+        return f"Rota #{self.id} | Veículo: {self.veiculo.modelo} - {self.veiculo.placa}"
 
 class Manutencao(models.Model):
     TIPO_MANUTENCAO = [
@@ -129,23 +162,16 @@ class Entrega(models.Model):
 
     origem = models.ForeignKey(Coordenada, on_delete=models.SET_NULL, null=True, related_name="origens")
     destino = models.ForeignKey(Coordenada, on_delete=models.SET_NULL, null=True, related_name="destinos")
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_ENTREGA,
-        default="PENDENTE"
-    )
-    
-    veiculo = models.ForeignKey('Veiculo', on_delete=models.SET_NULL, null=True, blank=True)
-    motorista = models.ForeignKey('PerfilMotorista', on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_ENTREGA, default="PENDENTE")
     cliente = models.ForeignKey(PerfilCliente, on_delete=models.SET_NULL, null=True, blank=True)
+    rota = models.ForeignKey(Rota, on_delete=models.SET_NULL, null=True, blank=True, related_name='entregas')
 
-    data_inicio_prevista = models.DateTimeField()
-    data_fim_prevista = models.DateTimeField()
-    data_inicio_real = models.DateTimeField(null=True, blank=True)
-    data_fim_real = models.DateTimeField(null=True, blank=True)
+    data_entrega_prevista = models.DateTimeField()
+    data_entrega_real = models.DateTimeField(null=True, blank=True)
 
-    def restricoes(self):
-        if self.veiculo and self.veiculo.status != 'DISPONIVEL':
-            raise ValidationError(f'O veículo {self.veiculo.modelo} - {self.veiculo.placa} não está disponível!')
+    def verificar_disponibilidade_rota(self):
+        if self.rota and self.rota.veiculo and self.rota.veiculo.status != 'DISPONIVEL':
+            raise ValidationError(f'O veículo {self.rota.veiculo.modelo} - {self.rota.veiculo.placa} da rota não está disponível!')
         
-    objects = EntregaManager()
+    def __str__(self):
+        return f"Entrega #{self.id} para {self.cliente}"

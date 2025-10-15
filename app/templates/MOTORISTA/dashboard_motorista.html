@@ -1,38 +1,65 @@
-{% extends 'base.html' %}
-{% load user_tags %} {# Carrega as template tags para verificar o tipo de usuário #}
+{% extends './motoristaBase.html' %} {# Recomendo usar a base do motorista, se tiver #}
 
 {% block title %}Dashboard do Motorista{% endblock %}
 
 {% block content %}
-<h2>Bem-vindo ao Dashboard do Motorista, {{ user.username }}!</h2>
+    <h3 class="mb-4">Painel do Motorista - Olá, {{ motorista.nome }}!</h3>
 
-{% if motorista %}
-    <p>CNH: {{ motorista.cnh }}</p>
-    {# {% if motorista.veiculo_atual %}<p>Veículo Atual: {{ motorista.veiculo_atual.placa }} - {{ motorista.veiculo_atual.modelo }}</p>{% endif %} #}
-{% endif %}
+    {# A nova lógica verifica se existe uma ROTA ATIVA #}
+    {% if rota_ativa %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4>Sua Rota Ativa: #{{ rota_ativa.id }}</h4>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>Veículo em Uso:</strong> 
+                    {{ rota_ativa.veiculo.modelo }} - Placa: <strong>{{ rota_ativa.veiculo.placa }}</strong>
+                </p>
+                <p>
+                    <strong>Status da Rota:</strong> 
+                    <span class="badge bg-primary">{{ rota_ativa.get_status_display }}</span>
+                </p>
 
-<h3>Suas Próximas Entregas:</h3>
-{% if entregas_atribuidas %}
-    <ul class="list-group">
-        {% for entrega in entregas_atribuidas %}
-            <li class="list-group-item">
-                Entrega #{{ entrega.id }} - Origem: {{ entrega.origem }} - Destino: {{ entrega.destino }}
-                <br> Status: {{ entrega.status }}
-                <br> Prevista para: {{ entrega.data_fim_prevista }}
-                <br> <a href="{% url 'atualizar_status_entrega' pk=entrega.id %}" class="btn btn-sm btn-info mt-2">Atualizar Status</a>
-                 {# Opcional: link para ver detalhes completos da entrega #}
-                 {# <a href="{% url 'detalhes_entrega_motorista' pk=entrega.id %}" class="btn btn-sm btn-secondary mt-2">Detalhes</a> #}
-            </li>
-        {% endfor %}
-    </ul>
-{% else %}
-    <p>Nenhuma entrega atribuída no momento.</p>
-{% endif %}
+                <hr>
 
-{# Links rápidos para funcionalidades do motorista #}
-<div class="mt-4">
-    <a href="{% url 'registrar_abastecimento' %}" class="btn btn-primary mr-2">Registrar Abastecimento</a>
-    <a href="{% url 'solicitar_manutencao' %}" class="btn btn-secondary">Solicitar Manutenção</a>
-</div>
+                <h5 class="mt-4">Entregas Pendentes nesta Rota:</h5>
+                
+                {# O loop agora usa a nova variável 'entregas_na_rota' #}
+                {% if entregas_na_rota %}
+                    <ul class="list-group">
+                        {% for entrega in entregas_na_rota %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Entrega #{{ entrega.id }}</strong>
+                                    <br>
+                                    <small class="text-muted">Destino: {{ entrega.destino }} | Status: {{ entrega.get_status_display }}</small>
+                                </div>
+                                <a href="{% url 'atualizar_status_entrega' pk=entrega.id %}" class="btn btn-sm btn-info">
+                                    Atualizar Status
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-success">
+                        Parabéns! Todas as entregas desta rota já foram concluídas.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Os botões de ação só aparecem se o motorista está em uma rota #}
+        <div class="mt-4">
+            <a href="{% url 'registrar_abastecimento' %}" class="btn btn-primary mr-2">Registrar Abastecimento</a>
+            <a href="{% url 'solicitar_manutencao' %}" class="btn btn-secondary">Solicitar Manutenção</a>
+        </div>
+
+    {% else %}
+        {# Mensagem para quando o motorista não tem nenhuma rota ativa #}
+        <div class="alert alert-info">
+            Você não tem nenhuma rota ativa no momento. Aguarde o planejamento de novas rotas.
+        </div>
+    {% endif %}
 
 {% endblock %}

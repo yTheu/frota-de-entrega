@@ -1,0 +1,71 @@
+{% extends './motoristaBase.html' %}
+{% load static %}
+
+{% block title %}Minhas Rotas{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Minhas Rotas Planejadas e Ativas</h3>
+    </div>
+
+    {% if rotas %}
+        {% for rota in rotas %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Rota #{{ rota.id }}</h5>
+                    {# Badge colorido para o status da rota #}
+                    {% if rota.status == 'PLANEJADA' %}
+                        <span class="badge bg-warning text-dark">Planejada</span>
+                    {% elif rota.status == 'EM_ROTA' %}
+                        <span class="badge bg-primary text-white">Em Rota</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Veículo:</strong> {{ rota.veiculo.modelo }} ({{ rota.veiculo.placa }})</p>
+                            <p><strong>Início Previsto:</strong> {{ rota.data_inicio_prevista|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total de Entregas na Rota:</strong> {{ rota.entregas.count }}</p>
+                            {# Você pode adicionar distância e duração aqui se tiver os dados da API #}
+                            {# <p><strong>Distância Estimada:</strong> {{ rota.distancia_total_km }} km</p> #}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6>Entregas nesta Rota:</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for entrega in rota.entregas.all %}
+                            <li class="list-group-item">
+                                Entrega #{{ entrega.id }} para <strong>{{ entrega.cliente.nome_empresa|default:'N/A' }}</strong>
+                                <br>
+                                <small class="text-muted">Status: {{ entrega.get_status_display }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer text-right bg-light">
+                    {# Lógica do botão de ação #}
+                    {% if rota.status == 'PLANEJADA' %}
+                        <form action="{% url 'iniciar_rota' rota.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-play-circle mr-2"></i>Iniciar Rota
+                            </button>
+                        </form>
+                    {% elif rota.status == 'EM_ROTA' %}
+                        <a href="{% url 'dashboard_motorista' %}" class="btn btn-info disabled" aria-disabled="true">
+                            <i class="fas fa-route mr-2"></i>Rota em Andamento
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            Você não tem nenhuma rota planejada ou em andamento no momento.
+        </div>
+    {% endif %}
+
+{% endblock %}

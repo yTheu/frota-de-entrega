@@ -32,7 +32,7 @@ class RotaManager(models.Manager):
                 )
 
                 #associa entregas à rota
-                entregas_alocar = Entrega.objects.filter(id__in=ids_entregas, status='PENDENTE')
+                entregas_alocar = Entrega.objects.filter(id__in=ids_entregas, status='EM_SEPARACAO')
                 if not entregas_alocar.exists():
                     raise Exception("Entregas selecionadas não estão mais disponíveis para alocação.")
                 
@@ -105,7 +105,8 @@ class Rota(models.Model):
     status = models.CharField(max_length=20, choices=status_rota, default='PLANEJADA')
 
     data_inicio_prevista = models.DateTimeField(null=True, blank=True)
-    data_fim_prevista = models.DateTimeField(null=True, blank=True)    
+    data_fim_prevista = models.DateTimeField(null=True, blank=True)
+    trajeto_polyline = models.TextField(blank=True, null=True)
 
     objects = RotaManager()
 
@@ -160,18 +161,24 @@ class Entrega(models.Model):
         ("PROBLEMA", "Problema"),
     ]
 
+    cliente = models.ForeignKey(PerfilCliente, on_delete=models.SET_NULL, null=True, blank=True)
     origem = models.ForeignKey(Coordenada, on_delete=models.SET_NULL, null=True, related_name="origens")
     destino = models.ForeignKey(Coordenada, on_delete=models.SET_NULL, null=True, related_name="destinos")
-    status = models.CharField(max_length=20, choices=STATUS_ENTREGA, default="PENDENTE")
-    cliente = models.ForeignKey(PerfilCliente, on_delete=models.SET_NULL, null=True, blank=True)
-    rota = models.ForeignKey(Rota, on_delete=models.SET_NULL, null=True, blank=True, related_name='entregas')
 
+    descricao_carga = models.CharField(max_length=255, help_text="Ex: 2 caixas de eletrônicos")
+    peso_kg = models.DecimalField(max_digits=10, decimal_places=2, help_text="Peso total da carga em Kg")
+    volume_m3 = models.DecimalField(max_digits=10, decimal_places=2, help_text="Volume total da carga em metros cúbicos (m³)")
+    fragil = models.BooleanField(default=False, verbose_name="Carga Frágil?")
+    
+    nome_destinatario = models.CharField(max_length=100)
+    telefone_destinatario = models.CharField(max_length=20)
+    observacoes_entrega = models.TextField(blank=True, help_text="Ex: Deixar na portaria, cuidado ao manusear.")
+    
+    status = models.CharField(max_length=20, choices=STATUS_ENTREGA, default="PENDENTE")
+    rota = models.ForeignKey(Rota, on_delete=models.SET_NULL, null=True, blank=True, related_name='entregas')
+    data_pedido = models.DateTimeField(auto_now_add=True)
     data_entrega_prevista = models.DateTimeField()
     data_entrega_real = models.DateTimeField(null=True, blank=True)
 
-    def verificar_disponibilidade_rota(self):
-        if self.rota and self.rota.veiculo and self.rota.veiculo.status != 'DISPONIVEL':
-            raise ValidationError(f'O veículo {self.rota.veiculo.modelo} - {self.rota.veiculo.placa} da rota não está disponível!')
-        
     def __str__(self):
         return f"Entrega #{self.id} para {self.cliente}"

@@ -13,8 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-4ocd+t2^=_s!4yy(zur3f=ht798#@mpn#d_75^^wjdtu^fvl2s'
-GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY') #api google maps
-
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY') #api google
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

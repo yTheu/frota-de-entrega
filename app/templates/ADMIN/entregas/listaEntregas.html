@@ -32,7 +32,7 @@
 					{% for e in entregas %}
 						<tr>
 							<td>{{ e.id }}</td>
-							<td>{{ e.cliente }}</td>
+							<td>{{ e.cliente.nome_empresa }}</td>
 							<td>{{ e.destino }}</td>
 							<td>{{ e.get_status_display }}</td>
 							<td>{{ e.veiculo }}</td>

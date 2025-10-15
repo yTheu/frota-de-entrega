@@ -1,78 +1,99 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <title>Monitoramento de Frota - Mapa</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; }
-    .info-box {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 8px 12px;
-      z-index: 1000;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+
+
+{% block title %}Rastreio de Frota em Tempo Real{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 75vh;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <div class="info-box" id="info">Atualizando...</div>
+</style>
+{% endblock %}
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    const API_VEICULOS = "/api/veiculos/"; // ajuste se necessário
-    const map = L.map('map').setView([-23.55, -46.63], 12); // centro inicial
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="fas fa-map-marked-alt mr-2"></i>Rastreio da Frota em Tempo Real</h3>
+    </div>
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    <div id="map"></div>
+{% endblock %}
 
-    // dicionário de marcadores por id
-    const markers = {};
 
-    async function fetchVeiculos() {
-      try {
-        const res = await fetch(API_VEICULOS);
-        const data = await res.json();
-        document.getElementById('info').innerText = `Veículos: ${data.length} — atualizado: ${new Date().toLocaleTimeString()}`;
+{% block extra_js %}
+<script>
+    let map;
+    let markers = {};
 
-        data.forEach(v => {
-          if (v.latitude == null || v.longitude == null) return;
-          const lat = parseFloat(v.latitude);
-          const lon = parseFloat(v.longitude);
-          const id = v.id;
+    function initMap() {
+        const initialPosition = { lat: -14.235, lng: -51.925 };
 
-          if (markers[id]) {
-            // atualiza posição do marcador e popup
-            markers[id].setLatLng([lat, lon]);
-            markers[id].getPopup().setContent(`<b>${v.placa}</b><br>${v.nome || ''}<br>${new Date(v.ultima_atualizacao).toLocaleString()}`);
-          } else {
-            // cria novo marcador
-            const marker = L.marker([lat, lon]).addTo(map);
-            marker.bindPopup(`<b>${v.placa}</b><br>${v.nome || ''}<br>${new Date(v.ultima_atualizacao).toLocaleString()}`);
-            markers[id] = marker;
-          }
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: initialPosition,
+            zoom: 5,
         });
 
-      } catch (err) {
-        console.error(err);
-        document.getElementById('info').innerText = 'Erro ao buscar veículos';
-      }
+        atualizarPosicoesDosVeiculos();
+        setInterval(atualizarPosicoesDosVeiculos, 10000);
     }
 
-    // primeira carga
-    fetchVeiculos();
+    async function atualizarPosicoesDosVeiculos() {
+        try {
+            const response = await fetch("{% url 'api_posicoes_veiculos' %}");
+            const data = await response.json();
 
-    // atualiza a cada 5s
-    setInterval(fetchVeiculos, 5000);
-  </script>
-</body>
-</html>
+            console.log("Posições recebidas do servidor:", data.veiculos);
+            
+            const activeVehicleIds = new Set();
+            data.veiculos.forEach(veiculo => {
+                const vehicleId = veiculo.id;
+                const position = { lat: veiculo.lat, lng: veiculo.lng };
+                activeVehicleIds.add(vehicleId);
+
+                if (!markers[vehicleId]) {
+                    console.log(`Criando novo marcador para o veículo ${veiculo.placa}`);
+                    markers[vehicleId] = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        title: `Veículo ${veiculo.placa}`,
+                        icon: {
+                            path: 'M22,14H20V12H17V11H15V6H9V11H7V12H4V14H3A1,1 0 0,0 2,15V19A1,1 0 0,0 3,20H4V21H6V20H18V21H20V20H21A1,1 0 0,0 22,19V15A1,1 0 0,0 22,14M6,18A2,2 0 0,1 4,16A2,2 0 0,1 6,14A2,2 0 0,1 8,16A2,2 0 0,1 6,18M18,18A2,2 0 0,1 16,16A2,2 0 0,1 18,14A2,2 0 0,1 20,16A2,2 0 0,1 18,18Z',
+                            fillColor: '#0d6efd',
+                            fillOpacity: 1,
+                            strokeWeight: 1,
+                            strokeColor: '#ffffff',
+                            rotation: 0,
+                            scale: 1.5,
+                            anchor: new google.maps.Point(12, 12)
+                        }
+                    });
+                } else {
+                    console.log(`Atualizando posição do veículo ${veiculo.placa}`);
+                    markers[vehicleId].setPosition(position);
+                    // Opcional: faz o mapa seguir o caminhão
+                    map.panTo(position); 
+                }
+            });
+
+            // Loop para remover marcadores de veículos que não estão mais em rota (continua igual)
+            for (const vehicleId in markers) {
+                if (!activeVehicleIds.has(parseInt(vehicleId))) {
+                    console.log(`Removendo marcador inativo do veículo ${vehicleId}`);
+                    markers[vehicleId].setMap(null);
+                    delete markers[vehicleId];
+                }
+            }
+
+        } catch (error) {
+            console.error("Erro ao buscar posições dos veículos:", error);
+        }
+    }
+</script>
+
+{# O SCRIPT QUE CARREGA A API DO GOOGLE MAPS. Ele deve ser o último. #}
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key={{GOOGLE_MAPS_API_KEY}}&callback=initMap">
+</script>
+{% endblock %}

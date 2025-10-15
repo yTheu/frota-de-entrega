@@ -1,12 +1,50 @@
-{% extends 'base.html' %}
+{% extends './clienteBase.html' %} {% block cliente_content %}
+<div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3>Solicitar Nova Entrega</h3>
+        </div>
+        <div class="card-body">
+            <p class="card-text text-muted">Preencha os detalhes abaixo para agendar sua entrega.</p>
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-{% block content %}
-<div class="container">
-    <h2>Cadastrar Nova Entrega</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Salvar</button>
-    </form>
+                <fieldset class="border p-3 mb-4">
+                    <legend class="float-none w-auto px-2 h6">Informações da Carga</legend>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">{{ form.descricao_carga.label_tag }} {{ form.descricao_carga }}</div>
+                        <div class="col-md-6 mb-3">{{ form.peso_kg.label_tag }} {{ form.peso_kg }}</div>
+                        <div class="col-md-6 mb-3">{{ form.volume_m3.label_tag }} {{ form.volume_m3 }}</div>
+                        <div class="col-md-12">
+                            <div class="form-check">{{ form.fragil }} {{ form.fragil.label_tag }}</div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border p-3 mb-4">
+                    <legend class="float-none w-auto px-2 h6">Endereços e Destinatário</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ form.endereco_origem.label_tag }} {{ form.endereco_origem }}</div>
+                        <div class="col-md-6 mb-3">{{ form.endereco_destino.label_tag }} {{ form.endereco_destino }}</div>
+                        <div class="col-md-6 mb-3">{{ form.nome_destinatario.label_tag }} {{ form.nome_destinatario }}</div>
+                        <div class="col-md-6 mb-3">{{ form.telefone_destinatario.label_tag }} {{ form.telefone_destinatario }}</div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border p-3 mb-4">
+                    <legend class="float-none w-auto px-2 h6">Agendamento e Observações</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ form.data_entrega_prevista.label_tag }} {{ form.data_entrega_prevista }}</div>
+                        <div class="col-md-12 mb-3">{{ form.observacoes_entrega.label_tag }} {{ form.observacoes_entrega }}</div>
+                    </div>
+                </fieldset>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'dashboard_cliente' %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-success">Agendar Entrega</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

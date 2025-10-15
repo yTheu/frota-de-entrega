@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Cliente - Sistema de Entregas{% endblock %}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="d-flex" style="min-height:100vh">
+    <nav class="bg-light border-right" style="width:250px;">
+      <div class="p-3">
+        <h5>Área do Cliente</h5>
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_cliente' %}">Meu Painel</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'cadastrar_pedido' %}">Solicitar Entrega</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'meus_pedidos' %}">Meus Pedidos</a></li>
+          </ul>
+      </div>
+    </nav>
+
+    <div class="flex-grow-1">
+      <header class="bg-white border-bottom p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="mb-0">Portal de Entregas</h4>
+            <small class="text-muted">Acompanhe e gerencie seus pedidos</small>
+          </div>
+          <div>
+            {% if user.is_authenticated %}
+              <span class="mr-3">{{ user.perfilcliente.nome_empresa|default:user.username }}</span>
+              <a href="{% url 'logout' %}">Sair</a>
+            {% endif %}
+          </div>
+        </div>
+      </header>
+
+      <main class="p-4">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+        
+        {% block cliente_content %}{% endblock %}
+      </main>
+
+      <footer class="border-top p-3 text-center text-muted small">&copy; {% now "Y" %} - Todos os direitos reservados</footer>

@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -8,10 +9,41 @@ from django.db import models, transaction
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, AbastecimentoForm, CoordenadaForm
-from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilMotorista, PerfilCliente
+from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilMotorista, PerfilCliente, Rota
 from .forms import LoginForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
+import googlemaps
+import threading
+from django.http import JsonResponse
+from .threads import executar_rota_em_thread
+
+gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY) #inicializa a comunicação com a API
+
+def get_posicoes_veiculos(request):
+    # Busca todos os veículos que estão atualmente em rota
+    veiculos_em_rota = Veiculo.objects.filter(status='EM_ENTREGA').select_related('localizacao_atual')
+    
+    posicoes = []
+    for veiculo in veiculos_em_rota:
+        if veiculo.localizacao_atual:
+            posicoes.append({
+                'id': veiculo.id,
+                'placa': veiculo.placa,
+                'lat': veiculo.localizacao_atual.latitude,
+                'lng': veiculo.localizacao_atual.longitude
+            })
+            
+    return JsonResponse({'veiculos': posicoes})
+
+def mapa_rastreio(request):
+    # O contexto que será enviado para o template
+    context = {
+        # Passando a chave do frontend para o template
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY
+    }
+    return render(request, 'teste.html', context)
+
 
 # ------------------Sistema (Views Públicas ou Gerais)-------------------------------------------------------------------------
 
@@ -248,104 +280,138 @@ def is_motorista(user):
     except PerfilMotorista.DoesNotExist:
         return False
 
+def get_rota_ativa_motorista(motorista):
+    return Rota.objects.filter(
+        motorista=motorista,
+        status='EM_ROTA'
+    ).select_related('veiculo').first()
+
 @login_required
-@user_passes_test(is_motorista) #acesso só dos motoristas
+@user_passes_test(is_motorista)
 def dashboard_motorista(request):
     motorista_perfil = request.user.perfilmotorista
-    def _motorista_veiculo_obj(motorista):
-        veiculo_str = motorista.veiculoAtual
-        if not veiculo_str:
-            return None
-        try:
-            return Veiculo.objects.filter(placa__iexact=veiculo_str).first() or Veiculo.objects.filter(modelo__iexact=veiculo_str).first()
-        except Exception:
-            return None
+    rota_ativa = get_rota_ativa_motorista(motorista_perfil)
 
-    veiculo_atual = _motorista_veiculo_obj(motorista_perfil)
-    if veiculo_atual:
-        entregas_atribuidas = Entrega.objects.filter(veiculo=veiculo_atual)
-    else:
-        entregas_atribuidas = Entrega.objects.none()
+    entregas_na_rota = []
+    if rota_ativa:
+        entregas_na_rota = rota_ativa.entregas.exclude(status='ENTREGUE').order_by('id')
 
-    return render(request, 'MOTORISTA/dashboard_motorista.html', {'motorista': motorista_perfil, 'entregas_atribuidas': entregas_atribuidas,})
+    contexto = {
+        'motorista': motorista_perfil,
+        'rota_ativa': rota_ativa,
+        'entregas_na_rota': entregas_na_rota,
+    }
+    return render(request, 'MOTORISTA/dashboard_motorista.html', contexto)
 
 @login_required
 @user_passes_test(is_motorista)
 def registrar_abastecimento(request):
+    motorista_perfil = request.user.perfilmotorista
+    rota_ativa = get_rota_ativa_motorista(motorista_perfil)
+
+    if not rota_ativa:
+        messages.error(request, "Você precisa estar em uma rota ativa para registrar um abastecimento.")
+        return redirect('dashboard_motorista')
+
     if request.method == 'POST':
         form = AbastecimentoForm(request.POST)
         if form.is_valid():
             abastecimento = form.save(commit=False)
-            motorista_perfil = request.user.perfilmotorista
             abastecimento.motorista = motorista_perfil
-            veiculo_obj = None
-            if motorista_perfil.veiculoAtual:
-                veiculo_obj = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
-            abastecimento.veiculo = veiculo_obj
+            abastecimento.veiculo = rota_ativa.veiculo
             abastecimento.save()
             messages.success(request, 'Abastecimento registrado com sucesso!')
             return redirect('dashboard_motorista')
     else:
         form = AbastecimentoForm()
-    return render(request, 'MOTORISTA/abastecer.html', {'form': form})
+    
+    return render(request, 'MOTORISTA/registrar_abastecimento.html', {'form': form, 'veiculo': rota_ativa.veiculo})
 
 
 @login_required
 @user_passes_test(is_motorista)
 def solicitar_manutencao(request):
+    motorista_perfil = request.user.perfilmotorista
+    rota_ativa = get_rota_ativa_motorista(motorista_perfil)
+
+    if not rota_ativa:
+        messages.error(request, "Você precisa estar em uma rota ativa para solicitar uma manutenção.")
+        return redirect('dashboard_motorista')
+
     if request.method == 'POST':
         form = ManutencaoForm(request.POST) 
         if form.is_valid():
             solicitacao = form.save(commit=False)
-            motorista_perfil = request.user.perfilmotorista
             solicitacao.motorista = motorista_perfil
-            veiculo_obj = None
-            if motorista_perfil.veiculoAtual:
-                veiculo_obj = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
-            solicitacao.veiculo = veiculo_obj
+            solicitacao.veiculo = rota_ativa.veiculo
             solicitacao.status = 'SOLICITADA'
             solicitacao.save()
             messages.success(request, 'Solicitação de manutenção enviada com sucesso!')
             return redirect('dashboard_motorista')
     else:
         form = ManutencaoForm()
-    return render(request, 'MOTORISTA/solicitarManutencao.html', {'form': form})
+    
+    return render(request, 'MOTORISTA/solicitar_manutencao.html', {'form': form, 'veiculo': rota_ativa.veiculo})
 
 @login_required
 @user_passes_test(is_motorista)
 def minhas_entregas(request):
     motorista_perfil = request.user.perfilmotorista
+    
+    rotas_do_motorista = Rota.objects.filter(
+        motorista=motorista_perfil,
+        status__in=['PLANEJADA', 'EM_ROTA']
+    ).prefetch_related('entregas')
 
-    entregas = Entrega.objects.filter(motorista=motorista_perfil, status__in=['ALOCADA', 'EM_ROTA']).select_related('veiculo', 'cliente', 'origem', 'destino').order_by('data_inicio_prevista')
-    return render(request, 'MOTORISTA/minhasEntregas.html', {'entregas': entregas})
+    contexto = {
+        'rotas': rotas_do_motorista,
+    }
+    return render(request, 'MOTORISTA/minhasEntregas.html', contexto)
 
 @login_required
 @user_passes_test(is_motorista)
 def atualizar_status_entrega(request, pk):
-    entrega = get_object_or_404(Entrega, pk=pk)
-    motorista_perfil = request.user.perfilmotorista
-    veiculo_atual = None
-    if motorista_perfil.veiculoAtual:
-        veiculo_atual = Veiculo.objects.filter(placa__iexact=motorista_perfil.veiculoAtual).first() or Veiculo.objects.filter(modelo__iexact=motorista_perfil.veiculoAtual).first()
-    if not veiculo_atual or entrega.veiculo != veiculo_atual:
-        messages.error(request, 'Você não tem permissão para atualizar esta entrega.')
-        return redirect('minhas_entregas')
+    entrega = get_object_or_404(
+        Entrega,
+        pk=pk, 
+        rota__motorista=request.user.perfilmotorista
+    )
 
     if request.method == 'POST':
         novo_status = request.POST.get('status')
-        if novo_status in ['EM_ROTA', 'ENTREGUE', 'PROBLEMA']:
+        if novo_status in ['ENTREGUE', 'PROBLEMA']: 
             entrega.status = novo_status
-            if novo_status == 'EM_ROTA' and not entrega.data_inicio_real:
-                 entrega.data_inicio_real = timezone.now()
-            if novo_status == 'ENTREGUE' and not entrega.data_fim_real:
-                 entrega.data_fim_real = timezone.now()
+            
+            if novo_status == 'ENTREGUE' and not entrega.data_entrega_real:
+                entrega.data_entrega_real = timezone.now()
 
             entrega.save()
-            messages.success(request, f'Status da entrega {entrega.id} atualizado para {novo_status}.')
+            messages.success(request, f'Status da entrega #{entrega.id} atualizado para {novo_status}.')
             return redirect('minhas_entregas')
 
-    return render(request, 'MOTORISTA/atualizarStatusEntrega.html', {'entrega': entrega}) 
+    return render(request, 'MOTORISTA/atualizar_status_entrega.html', {'entrega': entrega})
 
+@login_required
+@user_passes_test(is_motorista)
+def iniciar_rota(request, rota_id):
+    if request.method == 'POST':
+        # Garante que o motorista só pode iniciar uma rota que é dele
+        rota = get_object_or_404(Rota, pk=rota_id, motorista=request.user.perfilmotorista)
+        
+        if rota.status == 'PLANEJADA':
+            # Inicia a thread da simulação em background
+            thread = threading.Thread(
+                target=executar_rota_em_thread,
+                args=(rota.id,)
+            )
+            thread.start()
+
+            messages.success(request, f"Iniciando a Rota #{rota.id}! Bom trabalho!")
+        else:
+            messages.warning(request, "Esta rota não pode ser iniciada (já está em andamento ou foi concluída).")
+            
+    # Redireciona de volta para o dashboard, onde ele verá a rota como 'ativa'
+    return redirect('dashboard_motorista')
 
 # ------------------Views do Cliente-------------------------------------------------------------------------
 
@@ -369,18 +435,45 @@ def cadastrar_pedido(request):
     if request.method == 'POST':
         form = EntregaForm(request.POST)
         if form.is_valid():
-            entrega = form.save(commit=False)
-            entrega.cliente = request.user.perfilcliente
-            entrega.status = 'PENDENTE'
-            entrega.save()
+            try:
+                #pega os endereços
+                endereco_origem_txt = form.cleaned_data['endereco_origem']
+                endereco_destino_txt = form.cleaned_data['endereco_destino']
 
-            success, message = Entrega.objects.atribuir_entrega_automatica(entrega)
+                #passa os endereços para a API
+                geocode_origem = gmaps.geocode(endereco_origem_txt)
+                geocode_destino = gmaps.geocode(endereco_destino_txt)
 
-            if success:
-                messages.success(request, f'Ótima notícia! Seu pedido foi cadastrado e já alocado. {message}')
-            else:
-                messages.info(request, 'Pedido cadastrado com sucesso! Nosso sistema já está buscando o melhor veículo para sua entrega.')
-            return redirect('dashboard_cliente')
+                #vê se a API encontrou os locais
+                if not geocode_origem or not geocode_destino:
+                    messages.error(request, "Não foi possível encontrar um ou ambos os endereços. Por favor, verifique e tente novamente.")
+                    return render(request, 'CLIENTE/cadastrarEntrega.html', {'form': form})
+
+                #pega as coordenadas
+                origem_coords = geocode_origem[0]['geometry']['location']
+                coordenada_origem, _ = Coordenada.objects.get_or_create(
+                    latitude=origem_coords['lat'],
+                    longitude=origem_coords['lng']
+                )
+
+                destino_coords = geocode_destino[0]['geometry']['location']
+                coordenada_destino, _ = Coordenada.objects.get_or_create(
+                    latitude=destino_coords['lat'],
+                    longitude=destino_coords['lng']
+                )
+
+                entrega = form.save(commit=False)
+                entrega.cliente = request.user.perfilcliente
+                entrega.origem = coordenada_origem
+                entrega.destino = coordenada_destino
+                entrega.status = 'EM_SEPARACAO'
+                entrega.save()
+
+                messages.success(request, f"Pedido de entrega #{entrega.id} cadastrado com sucesso! Já estamos planejando sua rota.")
+                return redirect('dashboard_cliente')
+            
+            except Exception as e:
+                messages.error(request, f"Ocorreu um erro inesperado: {e}")
     else:
         form = EntregaForm()
 

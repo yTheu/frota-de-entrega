@@ -5,7 +5,7 @@ from app import views
 urlpatterns = [
     path('django-admin/', admin.site.urls),
     path('', views.index, name='index'),
-    path('teste/', views.test, name='test'),
+    path('teste/', views.mapa_rastreio, name='mapa_rastreio'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_cliente, name='register_cliente'),
@@ -37,13 +37,13 @@ urlpatterns = [
     path('admin/alertas/status/', views.alerta_status, name='alerta_status'),
     path('admin/mapa_coordenadas/', views.coordenadasMapa, name='mapa_coordenadas'),
 
-
     # url do PerfilMotorista
     path('motorista/dashboard/', views.dashboard_motorista, name='dashboard_motorista'),
     path('motorista/abastecimento/registrar/', views.registrar_abastecimento, name='registrar_abastecimento'),
     path('motorista/manutencao/solicitar/', views.solicitar_manutencao, name='solicitar_manutencao'),
     path('motorista/minhas_entregas/', views.minhas_entregas, name='minhas_entregas'),
     path('motorista/minhas_entregas/atualizar_status/<int:pk>/', views.atualizar_status_entrega, name='atualizar_status_entrega'),
+    path('motorista/rotas/iniciar/<int:rota_id>/', views.iniciar_rota, name='iniciar_rota'),
 
 
     # url do Cliente
@@ -51,5 +51,5 @@ urlpatterns = [
     path('cliente/pedidos/cadastrar/', views.cadastrar_pedido, name='cadastrar_pedido'),
     path('cliente/meus_pedidos/', views.meus_pedidos, name='meus_pedidos'),
     path('cliente/meus_pedidos/status/<int:pk>/', views.status_pedido, name='status_pedido'),
-
+    path('api/posicoes-veiculos/', views.get_posicoes_veiculos, name='api_posicoes_veiculos'),
 ]

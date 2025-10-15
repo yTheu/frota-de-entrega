@@ -1,41 +1,80 @@
-# seu_app/threads.py
 import time
 from django.db import connections
-from .models import Rota
+from .models import Rota, Coordenada, Veiculo
+from django.utils import timezone
+import googlemaps
+import random
+
+class frufru:
+    CIANO = '\033[96m'
+    VERDE = '\033[92m'
+    AMARELO = '\033[93m'
+    VERMELHO = '\033[91m'
+    MAGENTA = '\033[95m'
+    AZUL = '\033[94m'
+    FIM = '\033[0m'
+
+    CORES_ROTAS = [CIANO, VERDE, AMARELO, MAGENTA, AZUL]
 
 def executar_rota_em_thread(rota_id):
     connections.close_all()
+
+    cor_da_rota = random.choice(frufru.CORES_ROTAS)
     
     try:
         rota = Rota.objects.get(id=rota_id)
+        veiculo = rota.veiculo
     except Rota.DoesNotExist:
-        print(f"[Thread] Erro: Rota {rota_id} não encontrada.")
+        print(f"{frufru.VERMELHO}[Thread] Erro: Rota {rota_id} não encontrada.{frufru.FIM}")
         return
 
-    print(f"[Thread da Rota #{rota.id}] Executando plano. Duração estimada: {rota.duracao_estimada_minutos} min.")
+    log_prefix = f"{cor_da_rota}[ROTA #{rota.id} | VEÍCULO {veiculo.placa}]{frufru.FIM}"
+
+    print(f"{log_prefix} {frufru.VERDE}ROTA INICIADA.{frufru.FIM} Motorista: {rota.motorista.nome}. Entregas: {rota.entregas.count()}. Tempo Estimado: {rota.data_fim_prevista}")
 
     rota.status = 'EM_ROTA'
-    rota.data_inicio_real = time.timezone.now()
+    rota.data_inicio_real = timezone.now()
     rota.save()
-    rota.veiculo.status = 'EM_ENTREGA'
-    rota.veiculo.save()
+    veiculo.status = 'EM_ENTREGA'
+    veiculo.save()
     rota.motorista.disponivel = False
     rota.motorista.save()
     rota.entregas.all().update(status='EM_ROTA')
+    print(f"PFVR FUNCIONA: Salvei o veículo {veiculo.placa} com o status '{veiculo.status}' !!!")
     
-    if rota.duracao_estimada_minutos:
-        tempo_real_de_simulacao_segundos = rota.duracao_estimada_minutos
-    else:
-        tempo_real_de_simulacao_segundos = 15
+    if rota.trajeto_polyline:
+        pontos_do_trajeto = googlemaps.convert.decode_polyline(rota.trajeto_polyline)
+        total_de_pontos = len(pontos_do_trajeto)
+        print(f"{log_prefix} Trajeto definido com {total_de_pontos} pontos geográficos.")
+        
+        sleep_por_ponto = {rota.duracao_estimada_minutos} / total_de_pontos if total_de_pontos > 0 else 0.1
+        
+        pontos_para_logar = [int(total_de_pontos * p / 100) for p in range(0, 101, 10)] #mostrar o progresso
 
-    # Futuramente, em vez de um sleep único, você pode iterar sobre os waypoints
-    # salvos no 'dados_trajeto_json' e dar um sleep proporcional entre cada um,
-    # atualizando a 'localizacao_atual' do veículo a cada passo.
-    
-    print(f"[Thread da Rota #{rota.id}] Trajeto em andamento... (simulação levará {tempo_real_de_simulacao_segundos:.1f}s)")
-    time.sleep(tempo_real_de_simulacao_segundos)
+        for i, ponto in enumerate(pontos_do_trajeto):
+            #atualiza as coordenadas do veículo no bd
+            nova_localizacao, _ = Coordenada.objects.get_or_create(latitude=ponto['lat'], longitude=ponto['lng'])
+            veiculo.localizacao_atual = nova_localizacao
+            veiculo.save()
+            
+            #mostrar o percentual percorrido
+            if i in pontos_para_logar:
+                percentual_progresso = ((i + 1) / total_de_pontos) * 100
+                print(f"{log_prefix} {frufru.AMARELO}Progresso: {percentual_progresso:.0f}%...{frufru.FIM}")
+            
+            time.sleep(sleep_por_ponto)
+            
+    else: 
+        print(f"{log_prefix} {frufru.AMARELO}Sem trajeto detalhado. Simulando tempo total...{frufru.FIM}")
+        time.sleep(60)
 
-    print(f"[Thread da Rota #{rota.id}] Rota finalizada.")
+    # Rota concluída e enceerra a thread
+    print(f"{log_prefix} {frufru.VERDE}ROTA CONCLUÍDA.{frufru.FIM}")
     rota.status = 'CONCLUIDA'
-    rota.data_fim_real = time.timezone.now()
+    rota.data_fim_real = timezone.now()
     rota.save()
+    veiculo.status = 'DISPONIVEL'
+    veiculo.save()
+    rota.motorista.disponivel = True
+    rota.motorista.save()
+    rota.entregas.all().update(status='ENTREGUE')

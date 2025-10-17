@@ -182,3 +182,15 @@ class Entrega(models.Model):
 
     def __str__(self):
         return f"Entrega #{self.id} para {self.cliente}"
+
+class HistoricoEntrega(models.Model):
+    entrega = models.ForeignKey(Entrega, on_delete=models.CASCADE, related_name='historico')
+    data_evento = models.DateTimeField(auto_now_add=True)
+    descricao = models.CharField(max_length=255)
+    localizacao = models.ForeignKey(Coordenada, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-data_evento']
+
+    def __str__(self):
+        return f"{self.data_evento.strftime('%d/%m/%Y %H:%M')} - {self.descricao}"

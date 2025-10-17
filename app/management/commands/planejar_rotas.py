@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from math import radians, cos, sin, asin, sqrt
-from app.models import Entrega, Rota
+from app.models import Entrega, Rota, HistoricoEntrega
 from django.conf import settings
 import googlemaps
 
@@ -68,6 +68,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"  > Cluster #{i+1} pequeno demais. Aguardando mais entregas na região.")
                 continue
 
+            #dps adicionar lógica de tempo limite
+
             dados_da_api = chamar_google_maps_api(cluster)
             
             ids_das_entregas = [entrega.id for entrega in cluster]
@@ -79,5 +81,13 @@ class Command(BaseCommand):
 
             if success:
                 self.stdout.write(self.style.SUCCESS(f"  > SUCESSO! {message}"))
+
+                # pra registrar os log e acompanhar o histórico do processo de entrega ("Saiu de tal lugar", "Chegou a tal lugar...")
+                for entrega in cluster:
+                    HistoricoEntrega.objects.create(
+                        entrega=entrega,
+                        descricao="Seu pedido foi processado e alocado a uma rota de entrega."
+                    )
+                self.stdout.write(self.style.SUCCESS(f"  > Histórico de rastreamento atualizado para {len(cluster)} entregas."))
             else:
                 self.stdout.write(self.style.ERROR(f"  > FALHA! {message}"))

@@ -1,0 +1,50 @@
+{% extends './clienteBase.html' %}
+
+{% block title %}Detalhes do Pedido #{{ entrega.id }}{% endblock %}
+
+{% block cliente_content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Detalhes do Pedido #{{ entrega.id }}</h3>
+        <a href="{% url 'meus_pedidos' %}" class="btn btn-secondary">Voltar para Meus Pedidos</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Resumo da Entrega
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Status Atual:</strong> <span class="badge bg-info text-white">{{ entrega.get_status_display }}</span></p>
+                    <p><strong>Carga:</strong> {{ entrega.descricao_carga }}</p>
+                    <p><strong>Destinatário:</strong> {{ entrega.nome_destinatario }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Previsão de Entrega:</strong> {{ entrega.data_entrega_prevista|date:"d/m/Y" }}</p>
+                    <p><strong>Peso:</strong> {{ entrega.peso_kg }} Kg</p>
+                    <p><strong>Volume:</strong> {{ entrega.volume_m3 }} m³</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Histórico de Rastreamento
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                {% for evento in historico %}
+                    <li class="list-group-item">
+                        <p class="mb-1"><strong>{{ evento.descricao }}</strong></p>
+                        <small class="text-muted">{{ evento.data_evento|date:"d/m/Y às H:i" }}</small>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted">
+                        Nenhum evento de rastreamento disponível ainda.
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

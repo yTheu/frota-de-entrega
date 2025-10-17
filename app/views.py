@@ -9,7 +9,7 @@ from django.db import models, transaction
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, AbastecimentoForm, CoordenadaForm
-from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilMotorista, PerfilCliente, Rota
+from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilMotorista, PerfilCliente, Rota, HistoricoEntrega
 from .forms import LoginForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
@@ -426,8 +426,20 @@ def is_cliente(user):
 @user_passes_test(is_cliente)#acesso só pra cliente
 def dashboard_cliente(request):
     cliente_perfil = request.user.perfilcliente
-    entregas_cadastradas = Entrega.objects.filter(cliente=cliente_perfil)
-    return render(request, 'CLIENTE/dashboard_cliente.html', {'cliente': cliente_perfil, 'entregas_cadastradas': entregas_cadastradas,})
+    todos_os_pedidos = Entrega.objects.filter(cliente=cliente_perfil).order_by('-data_pedido')
+    
+    total_pedidos = todos_os_pedidos.count()
+    pedidos_em_rota = todos_os_pedidos.filter(status='EM_ROTA').count()
+    pedidos_entregues = todos_os_pedidos.filter(status='ENTREGUE').count()
+    
+    contexto = {
+        'cliente': cliente_perfil,
+        'entregas_cadastradas': todos_os_pedidos,
+        'total_pedidos': total_pedidos,
+        'pedidos_em_rota': pedidos_em_rota,
+        'pedidos_entregues': pedidos_entregues,
+    }
+    return render(request, 'CLIENTE/dashboard_cliente.html', contexto)
 
 @login_required
 @user_passes_test(is_cliente)
@@ -469,6 +481,11 @@ def cadastrar_pedido(request):
                 entrega.status = 'EM_SEPARACAO'
                 entrega.save()
 
+                HistoricoEntrega.objects.create(
+                    entrega=entrega,
+                    descricao="Pedido realizado e aguardando planejamento de rota."
+                )
+
                 messages.success(request, f"Pedido de entrega #{entrega.id} cadastrado com sucesso! Já estamos planejando sua rota.")
                 return redirect('dashboard_cliente')
             
@@ -489,13 +506,15 @@ def meus_pedidos(request):
 @login_required
 @user_passes_test(is_cliente)
 def status_pedido(request, pk):
-    pedido = get_object_or_404(Entrega, pk=pk)
-    if pedido.cliente != request.user.perfilcliente:
-        messages.error(request, 'Você não tem permissão para visualizar este pedido.')
-        return redirect('meus_pedidos')
+    entrega = get_object_or_404(Entrega, pk=pk, cliente=request.user.perfilcliente)
+    historico_eventos = entrega.historico.all()
 
-    return render(request, 'CLIENTE/statusPedido.html', {'pedido': pedido})
-
+    contexto = {
+        'entrega': entrega,
+        'historico': historico_eventos,
+    }
+    
+    return render(request, 'CLIENTE/acompanharEntrega.html', contexto)
 
 def register_cliente(request):
     if request.method == 'POST':

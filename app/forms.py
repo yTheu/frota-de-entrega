@@ -4,8 +4,18 @@ from django.contrib.auth.models import User
 from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilCliente
 
 class LoginForm(AuthenticationForm):
-    #vou fazer manualmente
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        self.fields['username'].widget = forms.TextInput(attrs={
+            'class': 'form-control form-control-lg', 
+            'placeholder': 'Nome de usuário',
+            'autofocus': True
+        })
+        self.fields['password'].widget = forms.PasswordInput(attrs={
+            'class': 'form-control form-control-lg',
+            'placeholder': 'Senha'
+        })
 
 class VeiculoForm(forms.ModelForm):
     class Meta:

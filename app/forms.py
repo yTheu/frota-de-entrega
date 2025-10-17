@@ -21,14 +21,25 @@ class MotoristaForm(forms.ModelForm):
         fields = ['nome', 'cpf', 'num_cnh', 'disponivel']
 
 class EntregaForm(forms.ModelForm):
-    endereco_origem = forms.CharField(label='Endereço de Origem Completo', required=True)
-    endereco_destino = forms.CharField(label='Endereço de Destino Completo', required=True)
+    #origem 
+    cep_origem = forms.CharField(label='CEP de Origem', max_length=9)
+    estado_origem = forms.CharField(label='Estado de Origem', max_length=2)
+    cidade_origem = forms.CharField(label='Cidade de Origem')
+    bairro_origem = forms.CharField(label='Bairro de Origem')
+    rua_origem = forms.CharField(label='Rua de Origem')
+    numero_origem = forms.CharField(label='Nº de Origem')
+
+    # destino
+    cep_destino = forms.CharField(label='CEP de Destino', max_length=9)
+    estado_destino = forms.CharField(label='Estado de Destino', max_length=2)
+    cidade_destino = forms.CharField(label='Cidade de Destino')
+    bairro_destino = forms.CharField(label='Bairro de Destino')
+    rua_destino = forms.CharField(label='Rua de Destino')
+    numero_destino = forms.CharField(label='Nº de Destino')
 
     class Meta:
         model = Entrega
         fields = [
-            'endereco_origem', 
-            'endereco_destino',
             'nome_destinatario',
             'telefone_destinatario',
             'descricao_carga',
@@ -39,11 +50,10 @@ class EntregaForm(forms.ModelForm):
             'observacoes_entrega'
         ]
         widgets = {
-            'data_entrega_prevista': forms.DateTimeInput(
-                attrs={'type': 'datetime-local'}
-            ),
+            'data_entrega_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'observacoes_entrega': forms.Textarea(attrs={'rows': 3}),
         }
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():

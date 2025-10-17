@@ -57,7 +57,16 @@ def executar_rota_em_thread(rota_id):
         total_de_pontos = len(pontos_do_trajeto)
         print(f"{log_prefix} Trajeto definido com {total_de_pontos} pontos geográficos.")
         
-        sleep_por_ponto = {rota.duracao_estimada_minutos} / total_de_pontos if total_de_pontos > 0 else 0.1
+        porcentagem_compreesao = 0.01
+        duracao_real_em_minutos = rota.duracao_estimada_minutos or 60
+        duracao_total_simulacao = (duracao_real_em_minutos * 60) *porcentagem_compreesao
+
+        if total_de_pontos > 0:
+            sleep_por_ponto = duracao_total_simulacao / total_de_pontos
+        else:
+            sleep_por_ponto = 1
+
+        print(f"{log_prefix} Duração real estimada: {duracao_real_em_minutos} min. Simulando em {duracao_total_simulacao:.1f} segundos ({porcentagem_compreesao*100}% do tempo real).")
         
         pontos_para_logar = [int(total_de_pontos * p / 100) for p in range(0, 101, 10)] #mostrar o progresso
 

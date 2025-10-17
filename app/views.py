@@ -449,8 +449,9 @@ def cadastrar_pedido(request):
         if form.is_valid():
             try:
                 #pega os endereços
-                endereco_origem_txt = form.cleaned_data['endereco_origem']
-                endereco_destino_txt = form.cleaned_data['endereco_destino']
+                dados = form.cleaned_data
+                endereco_origem_txt = f"{dados['rua_origem']}, {dados['numero_origem']} - {dados['bairro_origem']}, {dados['cidade_origem']} - {dados['estado_origem']}, {dados['cep_origem']}"
+                endereco_destino_txt = f"{dados['rua_destino']}, {dados['numero_destino']} - {dados['bairro_destino']}, {dados['cidade_destino']} - {dados['estado_destino']}, {dados['cep_destino']}"
 
                 #passa os endereços para a API
                 geocode_origem = gmaps.geocode(endereco_origem_txt)
@@ -463,15 +464,21 @@ def cadastrar_pedido(request):
 
                 #pega as coordenadas
                 origem_coords = geocode_origem[0]['geometry']['location']
-                coordenada_origem, _ = Coordenada.objects.get_or_create(
-                    latitude=origem_coords['lat'],
-                    longitude=origem_coords['lng']
+                coordenada_origem, _ = Coordenada.objects.update_or_create(latitude=origem_coords['lat'], longitude=origem_coords['lng'], defaults={
+                        'rua': dados['rua_origem'], 'numero': dados['numero_origem'],
+                        'bairro': dados['bairro_origem'], 'cidade': dados['cidade_origem'],
+                        'estado': dados['estado_origem'], 'cep': dados['cep_origem'],
+                        'endereco_completo': geocode_origem[0]['formatted_address']
+                    }
                 )
 
                 destino_coords = geocode_destino[0]['geometry']['location']
-                coordenada_destino, _ = Coordenada.objects.get_or_create(
-                    latitude=destino_coords['lat'],
-                    longitude=destino_coords['lng']
+                coordenada_destino, _ = Coordenada.objects.update_or_create(latitude=destino_coords['lat'], longitude=destino_coords['lng'], defaults={
+                        'rua': dados['rua_destino'], 'numero': dados['numero_destino'],
+                        'bairro': dados['bairro_destino'], 'cidade': dados['cidade_destino'],
+                        'estado': dados['estado_destino'], 'cep': dados['cep_destino'],
+                        'endereco_completo': geocode_destino[0]['formatted_address']
+                    }
                 )
 
                 entrega = form.save(commit=False)

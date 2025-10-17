@@ -25,8 +25,9 @@ class RotaManager(models.Manager):
                     veiculo=veiculo_disponivel,
                     motorista=motorista_disponivel,
                     status='PLANEJADA',
-                    distancia_total_km=dados_api['distancia_km'],
-                    duracao_estimada_minutos=dados_api['duracao_minutos'],
+                    distancia_total_km=dados_api.get('distancia_km'),
+                    duracao_estimada_minutos=dados_api.get('duracao_minutos'),
+                    trajeto_polyline=dados_api.get('trajeto_polyline'),
                     data_inicio_prevista=inicio_previsto,
                     data_fim_prevista=fim_previsto
                 )
@@ -149,8 +150,17 @@ class Coordenada(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
 
+    rua = models.CharField(max_length=255, blank=True)
+    numero = models.CharField(max_length=20, blank=True)
+    bairro = models.CharField(max_length=100, blank=True)
+    cidade = models.CharField(max_length=100, blank=True)
+    estado = models.CharField(max_length=50, blank=True)
+    cep = models.CharField(max_length=10, blank=True)
+
+    endereco_completo = models.CharField(max_length=500, blank=True)
+
     def __str__(self):
-        return f"{self.latitude}, {self.longitude}"
+        return self.endereco_completo or f"({self.latitude:.4f}, {self.longitude:.4f})"
 
 class Entrega(models.Model):
     STATUS_ENTREGA = [

@@ -4,48 +4,116 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Cliente - Sistema de Entregas{% endblock %}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>{% block title %}Portal do Cliente - IF Express{% endblock %}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            min-height: 100vh;
+            border-right: 1px solid #dee2e6;
+        }
+        .sidebar .nav-link {
+            color: #495057;
+            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #f1f3f5;
+            color: #0d6efd;
+        }
+        .sidebar .nav-link.active {
+            color: #0d6efd;
+            font-weight: 500;
+            border-left-color: #0d6efd;
+        }
+        .sidebar .nav-link .fa-fw {
+            width: 1.25em;
+            margin-right: 0.75rem;
+        }
+        .sidebar-header {
+            padding: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            color: #1a2533;
+        }
+        .main-content {
+            flex-grow: 1;
+        }
+        .topbar {
+            background-color: #fff;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 1.5rem;
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <div class="d-flex" style="min-height:100vh">
-    <nav class="bg-light border-right" style="width:250px;">
-      <div class="p-3">
-        <h5>Área do Cliente</h5>
-        <ul class="nav flex-column">
-          <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_cliente' %}">Meu Painel</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'cadastrar_pedido' %}">Solicitar Entrega</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'meus_pedidos' %}">Meus Pedidos</a></li>
-          </ul>
+  <div class="d-flex">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <i class="fas fa-truck-fast"></i> IF Express
       </div>
+      <ul class="nav flex-column mt-3">
+        {% url 'dashboard_cliente' as dashboard_url %}
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == dashboard_url %}active{% endif %}" href="{{ dashboard_url }}">
+                <i class="fas fa-tachometer-alt fa-fw"></i>Meu Painel
+            </a>
+        </li>
+        
+        {% url 'cadastrar_pedido' as cadastrar_url %}
+        <li class="nav-item"><a class="nav-link {% if request.path == cadastrar_url %}active{% endif %}" href="{{ cadastrar_url }}"><i class="fas fa-plus-circle fa-fw"></i>Solicitar Entrega</a></li>
+    
+        {% url 'meus_pedidos' as pedidos_url %}
+        <li class="nav-item"><a class="nav-link {% if request.path == pedidos_url %}active{% endif %}" href="{{ pedidos_url }}"><i class="fas fa-list-alt fa-fw"></i>Meus Pedidos</li>
+      </ul>
     </nav>
 
-    <div class="flex-grow-1">
-      <header class="bg-white border-bottom p-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h4 class="mb-0">Portal de Entregas</h4>
-            <small class="text-muted">Acompanhe e gerencie seus pedidos</small>
-          </div>
-          <div>
+    <div class="main-content">
+      <header class="topbar">
+        <div class="d-flex justify-content-end align-items-center">
             {% if user.is_authenticated %}
-              <span class="mr-3">{{ user.perfilcliente.nome_empresa|default:user.username }}</span>
-              <a href="{% url 'logout' %}">Sair</a>
+                <div class="dropdown">
+                    <button class="btn btn-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle me-2"></i>{{ user.perfilcliente.nome_empresa|default:user.username }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">Sair</a></li>
+                    </ul>
+                </div>
             {% endif %}
-          </div>
         </div>
       </header>
 
       <main class="p-4">
         {% if messages %}
           {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
           {% endfor %}
         {% endif %}
         
         {% block cliente_content %}{% endblock %}
       </main>
+    </div>
+  </div>
 
-      <footer class="border-top p-3 text-center text-muted small">&copy; {% now "Y" %} - Todos os direitos reservados</footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

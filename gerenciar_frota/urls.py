@@ -16,18 +16,25 @@ urlpatterns = [
     path('admin/dashboard/', views.dashboard_admin, name='dashboard_admin'),
     path('admin/veiculos/', views.lista_veiculos, name='lista_veiculos'),
     path('admin/veiculos/adicionar/', views.adicionar_veiculo, name='adicionar_veiculo'),
+    path('admin/veiculos/detalhes/<int:veiculo_id>', views.detalhes_veiculo, name='detalhes_veiculo'),
     path('admin/veiculos/editar/<int:pk>/', views.editar_veiculo, name='editar_veiculo'),
     path('admin/veiculos/deletar/<int:pk>/', views.deletar_veiculo, name='deletar_veiculo'),
 
     path('admin/motoristas/', views.lista_motoristas, name='lista_motoristas'),
     path('admin/motoristas/adicionar/', views.register_motorista, name='adicionar_motorista'),
+    path('admin/motoristas/detalhes/<int:motorista_id>/', views.detalhes_motorista, name='detalhes_motorista'),
     # path('admin/motoristas/editar/<int:pk>/', views.editar_motorista, name='editar_motorista'), #depois adiciono
     # path('admin/motoristas/deletar/<int:pk>/', views.deletar_motorista, name='deletar_motorista'), #depois adiciono
 
     path('admin/entregas/', views.lista_entregas, name='lista_entregas'),
     path('admin/entregas/adicionar', views.cadastrar_pedido, name='cadastrar_pedido'),
+    path('admin/entregas/detalhes/<int:entrega_id>/', views.detalhes_entrega_admin, name='detalhes_entrega_admin'),
     # path('admin/entregas/editar/<int:pk>/', views.editar_entrega, name='editar_entrega'), #depois adiciono
     # path('admin/entregas/deletar/<int:pk>/', views.deletar_entrega, name='deletar_entrega'), #depois adiciono
+
+    path('admin/rotas/', views.lista_rotas, name='lista_rotas'),
+    path('admin/rotas/detalhes/<int:rota_id>/', views.detalhes_rota, name='detalhes_rota'),
+    path('admin/rotas/planejar/', views.comecar_planejamento_rotas, name='comecar_planejamento_rotas'),
 
     path('admin/manutencoes/', views.lista_manutencoes, name='lista_manutencoes'),
     # path('admin/manutencoes/editar/<int:pk>/', views.editar_manutencao, name='editar_manutencao'), #depois adiciono

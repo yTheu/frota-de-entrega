@@ -1,82 +1,111 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}Lista de Veículos{% endblock %}
+{% block title %}Gerenciamento de Veículos{% endblock %}
 
 {% block content %}
-<h2>Lista de Veículos</h2>
-<form method="get" class="mb-3">
-    <input type="text" name="q" placeholder="Modelo ou placa" value="{{ q }}" />
-    <select name="status">
-        <option value="">Todos os status</option>
-        {% for key, label in status_choices %}
-            <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-    </select>
-    <input type="text" name="min_km" placeholder="km mínimo" value="{{ min_km }}" />
-    <input type="text" name="max_km" placeholder="km máximo" value="{{ max_km }}" />
-    <select name="order">
-        <option value="modelo" {% if order == 'modelo' %}selected{% endif %}>Ordenar por Modelo</option>
-        <option value="placa" {% if order == 'placa' %}selected{% endif %}>Ordenar por Placa</option>
-        <option value="km" {% if order == 'km' %}selected{% endif %}>Ordenar por KM (asc)</option>
-        <option value="-km" {% if order == '-km' %}selected{% endif %}>Ordenar por KM (desc)</option>
-    </select>
-    <button type="submit" class="btn btn-outline-primary">Filtrar</button>
-    <a class="btn btn-outline-secondary" href="{% url 'lista_veiculos' %}">Limpar</a>
-</form>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Gerenciamento de Veículos</h1>
+            <p class="text-muted">Filtre, busque e gerencie toda a sua frota.</p>
+        </div>
+        <div>
+            <a class="btn btn-primary" href="{% url 'adicionar_veiculo' %}">
+                <i class="fas fa-plus-circle mr-2"></i>Adicionar Veículo
+            </a>
+        </div>
+    </div>
 
-{% if veiculos and veiculos.paginator.count > 0 %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Modelo</th>
-                <th>Placa</th>
-                <th>KM</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for v in veiculos %}
-                <tr>
-                    <td>{{ v.modelo }}</td>
-                    <td>{{ v.placa }}</td>
-                    <td>{{ v.km }}</td>
-                    <td>{{ v.get_status_display }}</td>
-                    <td>
-                        <a href="{% url 'editar_veiculo' v.pk %}">Editar</a> |
-                        
-                        <form action="{% url 'deletar_veiculo' v.pk %}" method="POST" style="display: inline;">
-                            {% csrf_token %}
-                            <button type-="submit" class="btn btn-link text-danger p-0">
-                                Excluir
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="q" class="form-label">Buscar por Modelo/Placa</label>
+                    <input type="text" name="q" id="q" class="form-control" value="{{ q }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-control">
+                        <option value="">Todos</option>
+                        {% for key, label in status_choices %}
+                            <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="min_km" class="form-label">KM Mínima</label>
+                    <input type="number" name="min_km" id="min_km" class="form-control" value="{{ min_km }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="max_km" class="form-label">KM Máxima</label>
+                    <input type="number" name="max_km" id="max_km" class="form-control" value="{{ max_km }}">
+                </div>
+                <div class="col-md-3 d-flex">
+                    <button type="submit" class="btn btn-success flex-grow-1 mr-2">Filtrar</button>
+                    <a href="{% url 'lista_veiculos' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <nav aria-label="paginacao">
-        <ul class="pagination">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if min_km %}min_km={{ min_km }}&{% endif %}{% if max_km %}max_km={{ max_km }}&{% endif %}order={{ order }}&page={{ page_obj.previous_page_number }}">Anterior</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Modelo</th>
+                            <th>Placa</th>
+                            <th>Quilometragem</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for veiculo in veiculos %}
+                            <tr>
+                                <td><strong>{{ veiculo.modelo }}</strong></td>
+                                <td>{{ veiculo.placa }}</td>
+                                <td>{{ veiculo.km }} km</td>
+                                <td>
+                                    {# Badges coloridos para o status #}
+                                    {% if veiculo.status == 'DISPONIVEL' %}
+                                        <span class="badge bg-success text-white">{{ veiculo.get_status_display }}</span>
+                                    {% elif veiculo.status == 'EM_ROTA' or veiculo.status == 'EM_ENTREGA' %}
+                                        <span class="badge bg-primary text-white">{{ veiculo.get_status_display }}</span>
+                                    {% elif veiculo.status == 'EM_MANUTENCAO' %}
+                                        <span class="badge bg-warning text-dark">{{ veiculo.get_status_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-white">{{ veiculo.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'detalhes_veiculo' veiculo_id=veiculo.id%}" class="btn btn-sm btn-outline-info">Detalhes</a>
+                                    <a href="#" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">Nenhum veículo encontrado com os filtros aplicados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if veiculos.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if veiculos.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ veiculos.previous_page_number }}&q={{ q }}&status={{ status }}&min_km={{ min_km }}&max_km={{ max_km }}">Anterior</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">Página {{ veiculos.number }} de {{ veiculos.paginator.num_pages }}</span></li>
+                    {% if veiculos.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ veiculos.next_page_number }}&q={{ q }}&status={{ status }}&min_km={{ min_km }}&max_km={{ max_km }}">Próxima</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
             {% endif %}
 
-            <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
-
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if min_km %}min_km={{ min_km }}&{% endif %}{% if max_km %}max_km={{ max_km }}&{% endif %}order={{ order }}&page={{ page_obj.next_page_number }}">Próxima</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">Próxima</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-{% else %}
-    <p>Nenhum veículo cadastrado.</p>
-{% endif %}
-
-<a class="btn btn-primary" href="{% url 'adicionar_veiculo' %}">Adicionar Veículo</a>
+        </div>
+    </div>
 {% endblock %}

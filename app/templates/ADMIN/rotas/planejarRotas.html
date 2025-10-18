@@ -1,0 +1,31 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Planejamento Manual de Rotas{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3>Planejamento Manual de Rotas</h3>
+        </div>
+        <div class="card-body text-center">
+            <p class="lead">
+                Clique no botão abaixo para iniciar o processo de análise das entregas "Em Separação".
+            </p>
+            <p class="text-muted">
+                O sistema irá agrupar as entregas por proximidade, consultar a API do Google para otimizar os trajetos e criar novas rotas planejadas.
+                Este processo pode levar alguns segundos e será executado em segundo plano.
+            </p>
+            <hr>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-cogs mr-2"></i> Iniciar Planejamento Agora
+                </button>
+            </form>
+        </div>
+        <div class="card-footer text-muted">
+            Você será redirecionado para a lista de rotas. Acompanhe as novas rotas sendo criadas por lá.
+        </div>
+    </div>
+{% endblock %}

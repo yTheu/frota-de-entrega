@@ -1,27 +1,27 @@
+
+import threading
 from datetime import timedelta
-from django.utils import timezone
+import googlemaps
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import login, authenticate, logout
-from django.db import models, transaction
-from django.core.paginator import Paginator
-from django.db.models import Q
-from .forms import VeiculoForm, MotoristaForm, EntregaForm, ManutencaoForm, AbastecimentoForm, CoordenadaForm
-from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilMotorista, PerfilCliente, Rota, HistoricoEntrega
-from .forms import LoginForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
-import googlemaps
-import threading
+from django.core.management import call_command
+from django.core.paginator import Paginator
+from django.db import connections, models, transaction
+from django.db.models import OuterRef, Q, Subquery
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from .forms import AbastecimentoForm, EntregaForm, LoginForm,ManutencaoForm, MotoristaForm, VeiculoForm
+from .models import Abastecimento, Coordenada, Entrega, HistoricoEntrega, Manutencao, PerfilCliente, PerfilMotorista, Rota, Veiculo
 from .threads import executar_rota_em_thread
 
 gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY) #inicializa a comunicação com a API
 
 def get_posicoes_veiculos(request):
-    # Busca todos os veículos que estão atualmente em rota
     veiculos_em_rota = Veiculo.objects.filter(status='EM_ENTREGA').select_related('localizacao_atual')
     
     posicoes = []
@@ -107,12 +107,38 @@ def is_admin(user):
 def dashboard_admin(request):
     total_veiculos = Veiculo.objects.count()
     total_motoristas = PerfilMotorista.objects.count()
-    total_entregas_pendentes = Entrega.objects.filter(status='PENDENTE').count()
-    return render(request, 'ADMIN/dashboard_admin.html', {
+    rotas_ativas_count = Rota.objects.filter(status='EM_ROTA').count()
+    entregas_para_planejar = Entrega.objects.filter(status='EM_SEPARACAO').count()
+
+    rotas_ativas_list = Rota.objects.filter(status='EM_ROTA').select_related('veiculo', 'motorista').order_by('-data_inicio_real')[:5]
+    
+    veiculos_com_alerta = []
+    for veiculo in Veiculo.objects.all():
+        if veiculo.precisa_manutencao():
+            veiculos_com_alerta.append(veiculo)
+
+    contexto = {
         'total_veiculos': total_veiculos,
         'total_motoristas': total_motoristas,
-        'total_entregas_pendentes': total_entregas_pendentes,
-    })
+        'rotas_ativas_count': rotas_ativas_count,
+        'entregas_para_planejar': entregas_para_planejar,
+        'rotas_ativas_list': rotas_ativas_list,
+        'veiculos_com_alerta': veiculos_com_alerta[:5],
+    }
+    return render(request, 'ADMIN/dashboard_admin.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def adicionar_veiculo(request):
+    if request.method == 'POST':
+        form = VeiculoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Veículo adicionado com sucesso!')
+            return redirect('lista_veiculos')
+    else:
+        form = VeiculoForm()
+    return render(request, 'ADMIN/veiculos/adicionarVeiculo.html', {'form': form})
 
 @login_required
 @user_passes_test(is_admin)
@@ -144,7 +170,7 @@ def lista_veiculos(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'ADMIN/veiculos/listaVeiculos.html', {
+    contexto = {
         'veiculos': page_obj,
         'page_obj': page_obj,
         'q': q,
@@ -153,20 +179,30 @@ def lista_veiculos(request):
         'max_km': max_km,
         'order': order,
         'status_choices': Veiculo.status_veiculo,
-    })
+    }
+
+    return render(request, 'ADMIN/veiculos/listaVeiculos.html', contexto)
 
 @login_required
 @user_passes_test(is_admin)
-def adicionar_veiculo(request):
-    if request.method == 'POST':
-        form = VeiculoForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Veículo adicionado com sucesso!')
-            return redirect('lista_veiculos')
-    else:
-        form = VeiculoForm()
-    return render(request, 'ADMIN/veiculos/adicionarVeiculo.html', {'form': form})
+def detalhes_veiculo(request, veiculo_id):
+    veiculo = get_object_or_404(Veiculo, pk=veiculo_id)
+    
+    rota_ativa = Rota.objects.filter(veiculo=veiculo, status='EM_ROTA').select_related('motorista').first()
+    rotas_concluidas = Rota.objects.filter(veiculo=veiculo, status='CONCLUIDA').select_related('motorista').order_by('-data_fim_real')[:10]
+    
+    historico_manutencao = Manutencao.objects.filter(veiculo=veiculo).order_by('-data')[:10]
+    historico_abastecimento = Abastecimento.objects.filter(veiculo=veiculo).order_by('-dataAbastecimento')[:10]
+    
+    contexto = {
+        'veiculo': veiculo,
+        'rota_ativa': rota_ativa,
+        'rotas_concluidas': rotas_concluidas,
+        'historico_manutencao': historico_manutencao,
+        'historico_abastecimento': historico_abastecimento,
+    }
+    
+    return render(request, 'ADMIN/veiculos/detalhesVeiculo.html', contexto)
 
 @login_required
 @user_passes_test(is_admin)
@@ -195,13 +231,61 @@ def deletar_veiculo(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def lista_motoristas(request):
-     motoristas = PerfilMotorista.objects.all()
-     return render(request, 'ADMIN/motoristas/listaMotoristas.html', {'motoristas': motoristas})
+    veiculo_ativo_subquery = Rota.objects.filter(
+        motorista=OuterRef('pk'), 
+        status='EM_ROTA'
+    ).values('veiculo__placa')[:1]
+
+    motoristas_lista = PerfilMotorista.objects.annotate(placa_veiculo_atual=Subquery(veiculo_ativo_subquery)).order_by('nome')
+
+    filtrar_disponibilidade = request.GET.get('disponivel', '')
+    busca = request.GET.get('q', '')
+
+    if filtrar_disponibilidade:
+        esta_disponivel = filtrar_disponibilidade == 'sim'
+        motoristas_lista = motoristas_lista.filter(disponivel=esta_disponivel)
+
+    if busca:
+        motoristas_lista = motoristas_lista.filter(
+            Q(nome__icontains=busca) |
+            Q(cpf__icontains=busca) |
+            Q(num_cnh__icontains=busca)
+        )
+    
+    paginator = Paginator(motoristas_lista, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    contexto = {
+        'motoristas': page_obj,
+        'current_disponibilidade': filtrar_disponibilidade,
+        'current_query': busca,
+    }
+
+    return render(request, 'ADMIN/motoristas/listaMotoristas.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def detalhes_motorista(request, motorista_id):
+    motorista = get_object_or_404(PerfilMotorista, pk=motorista_id)
+    
+    rota_ativa = Rota.objects.filter(motorista=motorista,status='EM_ROTA').select_related('veiculo').first()
+    
+    rotas_concluidas = Rota.objects.filter(motorista=motorista,status='CONCLUIDA').select_related('veiculo').order_by('-data_fim_real')[:10]
+    
+    contexto = {
+        'motorista': motorista,
+        'rota_ativa': rota_ativa,
+        'rotas_concluidas': rotas_concluidas,
+    }
+    
+    return render(request, 'ADMIN/motoristas/detalhesMotorista.html', contexto)
 
 @login_required
 @user_passes_test(is_admin)
 def lista_entregas(request):
-    entregas_lista = Entrega.objects.select_related('cliente', 'rota__veiculo', 'rota__motorista').all()
+    entregas_lista = Entrega.objects.select_related('cliente', 'destino', 'rota__veiculo', 'rota__motorista').all().order_by('-id')
+
     filtrar_status = request.GET.get('status', '')
     busca = request.GET.get('q', '')
 
@@ -209,32 +293,97 @@ def lista_entregas(request):
         entregas_lista = entregas_lista.filter(status=filtrar_status)
 
     if busca:
-        entregas_lista = entregas_lista.filter(Q(cliente__nome_empresa__icontains=busca)|Q(rota__veiculo__placa__icontains=busca)|Q(rota__motorista__nome__icontains=busca))
-
-    ordenar = request.GET.get('ordenar', '-id')
-
-    dados_ordenacao = [
-        'rota__data_inicio_prevista', '-rota__data_inicio_prevista',
-        'status', '-status',
-        'cliente_nome_empresa', '-cliente_nome_empresa'
-    ]
-
-    if ordenar in dados_ordenacao:
-        entregas_lista = entregas_lista.order_by(ordenar)
-
-    total_por_pagina = Paginator(entregas_lista, 15)
-    num_pagina = request.GET.get('page')
-    pagina_obj = total_por_pagina.get_page(num_pagina)
+        entregas_lista = entregas_lista.filter(
+            Q(cliente__nome_empresa__icontains=busca) |
+            Q(rota__veiculo__placa__icontains=busca) |
+            Q(rota__motorista__nome__icontains=busca) |
+            Q(destino__cidade__icontains=busca)
+        )
+    
+    paginator = Paginator(entregas_lista, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     contexto = {
-        'entregas': pagina_obj,
+        'entregas': page_obj,
         'status_choices': Entrega.STATUS_ENTREGA,
         'current_status': filtrar_status,
         'current_query': busca,
-        'current_sort': ordenar,
     }
 
     return render(request, 'ADMIN/entregas/listaEntregas.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def detalhes_entrega_admin(request, entrega_id):
+    entrega = get_object_or_404(
+        Entrega.objects.select_related(
+            'cliente', 'origem', 'destino', 
+            'rota__veiculo', 'rota__motorista'
+        ),
+        pk=entrega_id
+    )
+    historico_eventos = entrega.historico.all()
+    
+    contexto = {
+        'entrega': entrega,
+        'historico': historico_eventos
+    }
+    return render(request, 'ADMIN/entregas/detalhesEntrega.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def lista_rotas(request):
+    rotas_lista = Rota.objects.select_related('veiculo', 'motorista').all().order_by('-data_criacao')
+
+    filtrar_status = request.GET.get('status', '')
+
+    if filtrar_status:
+        rotas_lista = rotas_lista.filter(status=filtrar_status)
+
+    paginator = Paginator(rotas_lista, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    contexto = {
+        'rotas': page_obj,
+        'status_choices': Rota.status_rota,
+        'current_status': filtrar_status,
+    }
+
+    return render(request, 'ADMIN/rotas/listaRotas.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def detalhes_rota(request, rota_id):
+    rota = get_object_or_404(Rota.objects.select_related('veiculo', 'motorista').prefetch_related('entregas__cliente', 'entregas__destino'),pk=rota_id)
+    
+    contexto = {
+        'rota': rota,
+    }
+    
+    return render(request, 'ADMIN/rotas/detalhesRota.html', contexto)
+
+def planejar_rotas_em_thread():
+    print("Thread de planejamento iniciado")
+    try:
+        connections.close_all()
+        call_command('planejar_rotas')
+        print("Thread de planejamento finalizada com sucesso")
+    except Exception as e:
+        print(f"Erro na thread de planejamento: {e}")
+
+@login_required
+@user_passes_test(is_admin)
+def comecar_planejamento_rotas(request):
+    if request.method == 'POST':
+        thread = threading.Thread(target=planejar_rotas_em_thread)
+        thread.start()
+            
+        messages.success(request, "Planejamento de rotas iniciado em segundo plano. Os resultados aparecerão na lista de rotas em breve.")
+        return redirect('lista_rotas')
+        
+    return render(request, 'ADMIN/rotas/planejarRotas.html')
 
 @login_required
 @user_passes_test(is_admin)
@@ -290,7 +439,11 @@ def get_rota_ativa_motorista(motorista):
 @user_passes_test(is_motorista)
 def dashboard_motorista(request):
     motorista_perfil = request.user.perfilmotorista
-    rota_ativa = get_rota_ativa_motorista(motorista_perfil)
+    
+    rota_ativa = Rota.objects.filter(
+        motorista=motorista_perfil,
+        status='EM_ROTA'
+    ).select_related('veiculo').prefetch_related('entregas__destino').first()
 
     entregas_na_rota = []
     if rota_ativa:
@@ -301,6 +454,7 @@ def dashboard_motorista(request):
         'rota_ativa': rota_ativa,
         'entregas_na_rota': entregas_na_rota,
     }
+
     return render(request, 'MOTORISTA/dashboard_motorista.html', contexto)
 
 @login_required
@@ -325,7 +479,7 @@ def registrar_abastecimento(request):
     else:
         form = AbastecimentoForm()
     
-    return render(request, 'MOTORISTA/registrar_abastecimento.html', {'form': form, 'veiculo': rota_ativa.veiculo})
+    return render(request, 'MOTORISTA/abastecer.html', {'form': form, 'veiculo': rota_ativa.veiculo})
 
 
 @login_required
@@ -351,21 +505,22 @@ def solicitar_manutencao(request):
     else:
         form = ManutencaoForm()
     
-    return render(request, 'MOTORISTA/solicitar_manutencao.html', {'form': form, 'veiculo': rota_ativa.veiculo})
+    return render(request, 'MOTORISTA/solicitarManutencao.html', {'form': form, 'veiculo': rota_ativa.veiculo})
 
 @login_required
 @user_passes_test(is_motorista)
 def minhas_entregas(request):
     motorista_perfil = request.user.perfilmotorista
-    
+
     rotas_do_motorista = Rota.objects.filter(
         motorista=motorista_perfil,
         status__in=['PLANEJADA', 'EM_ROTA']
-    ).prefetch_related('entregas')
+    ).select_related('veiculo').prefetch_related('entregas__destino')
 
     contexto = {
         'rotas': rotas_do_motorista,
     }
+    
     return render(request, 'MOTORISTA/minhasEntregas.html', contexto)
 
 @login_required
@@ -389,7 +544,7 @@ def atualizar_status_entrega(request, pk):
             messages.success(request, f'Status da entrega #{entrega.id} atualizado para {novo_status}.')
             return redirect('minhas_entregas')
 
-    return render(request, 'MOTORISTA/atualizar_status_entrega.html', {'entrega': entrega})
+    return render(request, 'MOTORISTA/atualizarStatusEntrega.html', {'entrega': entrega})
 
 @login_required
 @user_passes_test(is_motorista)
@@ -400,10 +555,7 @@ def iniciar_rota(request, rota_id):
         
         if rota.status == 'PLANEJADA':
             # Inicia a thread da simulação em background
-            thread = threading.Thread(
-                target=executar_rota_em_thread,
-                args=(rota.id,)
-            )
+            thread = threading.Thread(target=executar_rota_em_thread,args=(rota.id,))
             thread.start()
 
             messages.success(request, f"Iniciando a Rota #{rota.id}! Bom trabalho!")
@@ -486,6 +638,7 @@ def cadastrar_pedido(request):
                 entrega.origem = coordenada_origem
                 entrega.destino = coordenada_destino
                 entrega.status = 'EM_SEPARACAO'
+                entrega.data_entrega_prevista = timezone.now() + timezone.timedelta(days=2)
                 entrega.save()
 
                 HistoricoEntrega.objects.create(

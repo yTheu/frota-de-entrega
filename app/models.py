@@ -11,9 +11,15 @@ class RotaManager(models.Manager):
             return (False, "Nenhuma entrega selecionada.")
         try:
             with transaction.atomic(): #procura por motoristas e veiculos livres
-                veiculo_disponivel = Veiculo.objects.select_for_update().filter(status='DISPONIVEL').first()
-                motorista_disponivel = PerfilMotorista.objects.select_for_update().filter(disponivel=True).first()
+                #pega os motorista e veículos q estão na rota planejada ou em execução e agrupa
+                motoristas_ocupados_ids = Rota.objects.filter(status__in=['PLANEJADA', 'EM_ROTA']).values_list('motorista_id', flat=True)
+                veiculos_ocupados_ids = Rota.objects.filter(status__in=['PLANEJADA', 'EM_ROTA']).values_list('veiculo_id', flat=True)
 
+                #pega os motoristas e veículos livres (q n entraram no agrupamento acima) e escolhe o primeiro pra atribuir à entrega
+                motorista_disponivel = PerfilMotorista.objects.select_for_update().filter(disponivel=True).exclude(id__in=motoristas_ocupados_ids).first()
+                veiculo_disponivel = Veiculo.objects.select_for_update().filter(status='DISPONIVEL').exclude(id__in=veiculos_ocupados_ids).first()
+
+                # mas e se não tiver nenhum disponível? chora ;)
                 if not veiculo_disponivel or not motorista_disponivel:
                     return (False, "Nenhum veículo ou motorista disponível no momento.")
                 
@@ -32,7 +38,7 @@ class RotaManager(models.Manager):
                     data_fim_prevista=fim_previsto
                 )
 
-                #associa entregas à rota
+                # associa entregas à rota
                 entregas_alocar = Entrega.objects.filter(id__in=ids_entregas, status='EM_SEPARACAO')
                 if not entregas_alocar.exists():
                     raise Exception("Entregas selecionadas não estão mais disponíveis para alocação.")
@@ -105,8 +111,13 @@ class Rota(models.Model):
     motorista = models.ForeignKey(PerfilMotorista, on_delete=models.PROTECT, related_name='rotas')
     status = models.CharField(max_length=20, choices=status_rota, default='PLANEJADA')
 
+    data_criacao = models.DateTimeField(auto_now_add=True)
     data_inicio_prevista = models.DateTimeField(null=True, blank=True)
     data_fim_prevista = models.DateTimeField(null=True, blank=True)
+
+    data_inicio_real = models.DateTimeField(null=True, blank=True)
+    data_fim_real = models.DateTimeField(null=True, blank=True)
+
     trajeto_polyline = models.TextField(blank=True, null=True)
 
     objects = RotaManager()
@@ -187,7 +198,7 @@ class Entrega(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_ENTREGA, default="PENDENTE")
     rota = models.ForeignKey(Rota, on_delete=models.SET_NULL, null=True, blank=True, related_name='entregas')
     data_pedido = models.DateTimeField(auto_now_add=True)
-    data_entrega_prevista = models.DateTimeField()
+    data_entrega_prevista = models.DateTimeField(null=True, blank=True)
     data_entrega_real = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

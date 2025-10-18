@@ -1,0 +1,35 @@
+{% extends './motoristaBase.html' %}
+{% load static %}
+
+{% block title %}Atualizar Entrega #{{ entrega.id }}{% endblock %}
+
+{% block content %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3>Atualizar Status da Entrega #{{ entrega.id }}</h3>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Destinatário: {{ entrega.nome_destinatário }}</h5>
+            <p class="card-text">
+                <strong>Destino:</strong> {{ entrega.destino }} <br>
+                <strong>Carga:</strong> {{ entrega.descricao_carga }}
+            </p>
+            <hr>
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="statusSelect"><strong>Selecione o novo status:</strong></label>
+                    <select class="form-control" id="statusSelect" name="status">
+                        <option value="ENTREGUE">Entrega Realizada com Sucesso</option>
+                        <option value="PROBLEMA">Reportar um Problema</option>
+                    </select>
+                </div>
+                
+                <div class="d-flex justify-content-end mt-4">
+                    <a href="{% url 'minhas_entregas' %}" class="btn btn-secondary mr-2">Cancelar</a>
+                    <button type="submit" class="btn btn-success">Atualizar Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

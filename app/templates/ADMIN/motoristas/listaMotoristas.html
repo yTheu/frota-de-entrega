@@ -1,45 +1,98 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}Lista de Motoristas{% endblock %}
+{% block title %}Gerenciamento de Motoristas{% endblock %}
 
 {% block content %}
-	<div class="d-flex justify-content-between align-items-center mb-3">
-		<div>
-			<h1>Motoristas</h1>
-			<p class="text-muted">Gestão da equipe de motoristas</p>
-		</div>
-		<div>
-			<a class="btn btn-primary" href="{% url 'adicionar_motorista' %}">Adicionar Motorista</a>
-		</div>
-	</div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Gerenciamento de Motoristas</h1>
+            <p class="text-muted">Filtre e gerencie sua equipe de motoristas.</p>
+        </div>
+        <div>
+            <a class="btn btn-primary" href="{% url 'adicionar_motorista' %}">
+                <i class="fas fa-user-plus mr-2"></i>Adicionar Motorista
+            </a>
+        </div>
+    </div>
 
-	<div class="card">
-		<div class="card-body">
-			<table class="table table-striped">
-				<thead>
-					<tr>
-						<th>Motorista</th>
-						<th>CPF</th>
-						<th>Veículo Atual</th>
-						<th>Disponível</th>
-						<th>Ações</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for m in motoristas %}
-						<tr>
-							<td>{{ m.nome }}</td>
-							<td>{{ m.cpf }}</td>
-							<td>{{ m.veiculoAtual }}</td>
-							<td>{{ m.disponivel }}</td>
-							<td><a href="#">Editar</a> | <a href="#">Excluir</a></td>
-						</tr>
-					{% empty %}
-						<tr><td colspan="5">Nenhum motorista cadastrado.</td></tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	</div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar por nome, CPF ou CNH..." value="{{ current_query }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="disponivel" class="form-control">
+                        <option value="">Filtrar por Disponibilidade</option>
+                        <option value="sim" {% if current_disponibilidade == 'sim' %}selected{% endif %}>Disponível</option>
+                        <option value="nao" {% if current_disponibilidade == 'nao' %}selected{% endif %}>Indisponível (Em Rota)</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex">
+                    <button type="submit" class="btn btn-success flex-grow-1 mr-2">Filtrar</button>
+                    <a href="{% url 'lista_motoristas' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Motorista</th>
+                            <th>CPF</th>
+                            <th>Veículo em Rota</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for motorista in motoristas %}
+                            <tr>
+                                <td><strong>{{ motorista.nome }}</strong></td>
+                                <td>{{ motorista.cpf }}</td>
+                                <td>
+                                    {# Exibe a placa do veículo que a view anotou #}
+                                    {{ motorista.placa_veiculo_atual|default:"-" }}
+                                </td>
+                                <td>
+                                    {# Badge colorido para o status 'disponivel' #}
+                                    {% if motorista.disponivel %}
+                                        <span class="badge bg-success text-white">Disponível</span>
+                                    {% else %}
+                                        <span class="badge bg-danger text-white">Em Rota</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'detalhes_motorista' motorista.id %}" class="btn btn-sm btn-outline-secondary">Detalhar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">Nenhum motorista encontrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if motoristas.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if motoristas.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ motoristas.previous_page_number }}&q={{ current_query }}&disponivel={{ current_disponibilidade }}">Anterior</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">Página {{ motoristas.number }} de {{ motoristas.paginator.num_pages }}</span></li>
+                    {% if motoristas.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ motoristas.next_page_number }}&q={{ current_query }}&disponivel={{ current_disponibilidade }}">Próxima</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
 {% endblock %}

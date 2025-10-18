@@ -56,7 +56,6 @@ class EntregaForm(forms.ModelForm):
             'peso_kg',
             'volume_m3',
             'fragil',
-            'data_entrega_prevista',
             'observacoes_entrega'
         ]
         widgets = {
@@ -72,17 +71,55 @@ class EntregaForm(forms.ModelForm):
 class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao
-        fields = ['veiculo', 'tipo', 'descricao', 'data', 'custo', 'status']
+        fields = ['tipo', 'descricao', 'data']
+        
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date'}),
+            'tipo': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'descricao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Descreva o problema em detalhes. Ex: Barulho estranho no motor ao acelerar.'
+            }),
+            'data': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+        }
+        
+        labels = {
+            'tipo': 'Tipo de Manutenção',
+            'descricao': 'Descrição do Problema',
+            'data': 'Data da Ocorrência',
         }
 
 class AbastecimentoForm(forms.ModelForm):
     class Meta:
         model = Abastecimento
-        fields = ['litros', 'custo', 'dataAbastecimento', 'veiculo']
+        fields = ['litros', 'custo', 'dataAbastecimento']
+        
         widgets = {
-            'dataAbastecimento': forms.DateInput(attrs={'type': 'date'}),
+            'litros': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01',
+                'placeholder': 'Ex: 50.25'
+            }),
+            'custo': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01',
+                'placeholder': 'Ex: 250.00'
+            }),
+            'dataAbastecimento': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+        }
+ 
+        labels = {
+            'litros': 'Quantidade (Litros)',
+            'custo': 'Custo Total (R$)',
+            'dataAbastecimento': 'Data do Abastecimento',
         }
 
 class CoordenadaForm(forms.ModelForm):

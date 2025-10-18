@@ -1,11 +1,10 @@
 import time
 from django.db import connections
-from .models import Rota, Coordenada, Veiculo, HistoricoEntrega
+from .models import Rota, Coordenada, HistoricoEntrega
 from django.utils import timezone
 import googlemaps
 import random
 from django.conf import settings
-
 
 class frufru:
     CIANO = '\033[96m'
@@ -66,7 +65,7 @@ def executar_rota_em_thread(rota_id):
         else:
             sleep_por_ponto = 1
 
-        print(f"{log_prefix} Duração real estimada: {duracao_real_em_minutos} min. Simulando em {duracao_total_simulacao:.1f} segundos ({porcentagem_compreesao*100}% do tempo real).")
+        print(f"{log_prefix} Duração real estimada: {duracao_real_em_minutos} min. Simulando em {(duracao_total_simulacao / 60):.1f} minutos ({porcentagem_compreesao*100:.0f}% do tempo real).")
         
         pontos_para_logar = [int(total_de_pontos * p / 100) for p in range(0, 101, 10)] #mostrar o progresso
 
@@ -87,13 +86,22 @@ def executar_rota_em_thread(rota_id):
             if i > 0 and i % PONTOS_PARA_VERIFICAR_CIDADE == 0:
                 try:
                     reverse_geocode_result = gmaps.reverse_geocode((ponto['lat'], ponto['lng']))
-                    nova_cidade = next((comp['long_name'] for comp in reverse_geocode_result[0]['address_components'] if 'locality' in comp['types']), None)
+                    
+                    nova_cidade = None
+                    if reverse_geocode_result:
+                        for component in reverse_geocode_result[0]['address_components']:
+                            if 'locality' in component['types'] or 'administrative_area_level_2' in component['types']:
+                                nova_cidade = component['long_name']
+                                break
+                    
+                    print(f"  > Diagnóstico: Cidade extraída da API: '{nova_cidade}'")
                     
                     if nova_cidade and nova_cidade != cidade_atual_reportada:
                         print(f"{log_prefix} {frufru.CIANO}CHECKPOINT: Veículo passando por {nova_cidade}.{frufru.FIM}")
                         for entrega in rota.entregas.all():
                             HistoricoEntrega.objects.create(entrega=entrega, descricao=f"Seu pedido está passando por {nova_cidade}.")
                         cidade_atual_reportada = nova_cidade
+
                 except Exception as e:
                     print(f"{log_prefix} {frufru.VERMELHO}Erro no Reverse Geocoding: {e}{frufru.FIM}")
 
@@ -108,6 +116,7 @@ def executar_rota_em_thread(rota_id):
     rota.status = 'CONCLUIDA'
     rota.data_fim_real = timezone.now()
     rota.save()
+    veiculo.km += rota.distancia_total_km
     veiculo.status = 'DISPONIVEL'
     veiculo.save()
     rota.motorista.disponivel = True

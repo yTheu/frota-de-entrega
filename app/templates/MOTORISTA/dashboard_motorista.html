@@ -1,64 +1,74 @@
-{% extends './motoristaBase.html' %} {# Recomendo usar a base do motorista, se tiver #}
+{% extends './motoristaBase.html' %}
 
-{% block title %}Dashboard do Motorista{% endblock %}
+{% block title %}Meu Painel{% endblock %}
 
 {% block content %}
-    <h3 class="mb-4">Painel do Motorista - Olá, {{ motorista.nome }}!</h3>
+    <div class="mb-4">
+        <h3>Painel Operacional</h3>
+        <p class="text-muted">Olá, {{ motorista.nome }}! Aqui está o status da sua rota atual.</p>
+    </div>
 
-    {# A nova lógica verifica se existe uma ROTA ATIVA #}
     {% if rota_ativa %}
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h4>Sua Rota Ativa: #{{ rota_ativa.id }}</h4>
-            </div>
-            <div class="card-body">
-                <p>
-                    <strong>Veículo em Uso:</strong> 
-                    {{ rota_ativa.veiculo.modelo }} - Placa: <strong>{{ rota_ativa.veiculo.placa }}</strong>
-                </p>
-                <p>
-                    <strong>Status da Rota:</strong> 
-                    <span class="badge bg-primary">{{ rota_ativa.get_status_display }}</span>
-                </p>
-
-                <hr>
-
-                <h5 class="mt-4">Entregas Pendentes nesta Rota:</h5>
-                
-                {# O loop agora usa a nova variável 'entregas_na_rota' #}
-                {% if entregas_na_rota %}
-                    <ul class="list-group">
-                        {% for entrega in entregas_na_rota %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Entrega #{{ entrega.id }}</strong>
-                                    <br>
-                                    <small class="text-muted">Destino: {{ entrega.destino }} | Status: {{ entrega.get_status_display }}</small>
-                                </div>
-                                <a href="{% url 'atualizar_status_entrega' pk=entrega.id %}" class="btn btn-sm btn-info">
-                                    Atualizar Status
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <div class="alert alert-success">
-                        Parabéns! Todas as entregas desta rota já foram concluídas.
-                    </div>
-                {% endif %}
-            </div>
+        <div class="mb-4">
+            <a href="{% url 'registrar_abastecimento' %}" class="btn btn-primary"><i class="fas fa-gas-pump fa-fw mr-2"></i>Registrar Abastecimento</a>
+            <a href="{% url 'solicitar_manutencao' %}" class="btn btn-secondary"><i class="fas fa-tools fa-fw mr-2"></i>Solicitar Manutenção</a>
         </div>
 
-        {# Os botões de ação só aparecem se o motorista está em uma rota #}
-        <div class="mt-4">
-            <a href="{% url 'registrar_abastecimento' %}" class="btn btn-primary mr-2">Registrar Abastecimento</a>
-            <a href="{% url 'solicitar_manutencao' %}" class="btn btn-secondary">Solicitar Manutenção</a>
+        <div class="row">
+            <div class="col-lg-5 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-route mr-2"></i>Rota Ativa: #{{ rota_ativa.id }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Veículo:</strong> {{ rota_ativa.veiculo.modelo }} ({{ rota_ativa.veiculo.placa }})</p>
+                        <p><strong>Status:</strong> <span class="badge bg-primary">{{ rota_ativa.get_status_display }}</span></p>
+                        <hr>
+                        <p><strong>Início da Rota:</strong> {{ rota_ativa.data_inicio_real|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Previsão de Término:</strong> {{ rota_ativa.data_fim_prevista|date:"d/m/Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-box-open mr-2"></i>Próximas Entregas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if entregas_na_rota %}
+                            <ul class="list-group list-group-flush">
+                                {% for entrega in entregas_na_rota %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Entrega #{{ entrega.id }}</strong>
+                                            <small class="d-block text-muted">Destino: {{ entrega.destino.cidade|default:entrega.destino }}</small>
+                                        </div>
+                                        <a href="{% url 'atualizar_status_entrega' pk=entrega.id %}" class="btn btn-sm btn-info">
+                                            Atualizar
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="alert alert-success text-center">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <p class="mb-0"><strong>Parabéns!</strong> Todas as entregas desta rota foram concluídas.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
 
     {% else %}
-        {# Mensagem para quando o motorista não tem nenhuma rota ativa #}
-        <div class="alert alert-info">
-            Você não tem nenhuma rota ativa no momento. Aguarde o planejamento de novas rotas.
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-coffee fa-3x text-muted mb-3"></i>
+                <h4 class="card-title">Você está disponível!</h4>
+                <p class="card-text">Nenhuma rota ativa no momento. Verifique a página de "Minhas Rotas" para ver se há novas rotas planejadas para você iniciar.</p>
+                <a href="{% url 'minhas_entregas' %}" class="btn btn-primary">Ver Rotas Planejadas</a>
+            </div>
         </div>
     {% endif %}
 

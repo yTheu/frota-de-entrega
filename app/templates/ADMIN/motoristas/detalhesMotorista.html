@@ -1,0 +1,82 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Detalhes do Motorista: {{ motorista.nome }}{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Perfil do Motorista: {{ motorista.nome }}</h3>
+        <div>
+            <a href="{% url 'lista_motoristas' %}" class="btn btn-secondary">Voltar para a Lista</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">Informações Pessoais</div>
+                <div class="card-body">
+                    <p><strong>Nome Completo:</strong> {{ motorista.nome }}</p>
+                    <p><strong>CPF:</strong> {{ motorista.cpf }}</p>
+                    <p><strong>Nº da CNH:</strong> {{ motorista.num_cnh }}</p>
+                    <p><strong>Usuário do Sistema:</strong> {{ motorista.user.username }}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Status Atual</div>
+                <div class="card-body">
+                    {% if motorista.disponivel %}
+                        <div class="alert alert-success">
+                            <h5 class="alert-heading"><i class="fas fa-check-circle mr-2"></i>Disponível</h5>
+                            <p class="mb-0">Este motorista está livre para ser alocado a novas rotas.</p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle mr-2"></i>Em Rota</h5>
+                            <p>Este motorista está atualmente em uma rota e indisponível.</p>
+                            {% if rota_ativa %}
+                                <hr>
+                                <p class="mb-1"><strong>Rota Ativa:</strong> #{{ rota_ativa.id }}</p>
+                                <p class="mb-0"><strong>Veículo:</strong> {{ rota_ativa.veiculo.placa }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">Histórico de Rotas Recentes (Últimas 10)</div>
+                <div class="card-body">
+                    {% if rotas_concluidas %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th># Rota</th>
+                                        <th>Data de Conclusão</th>
+                                        <th>Veículo</th>
+                                        <th>Entregas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rota in rotas_concluidas %}
+                                    <tr>
+                                        <td>#{{ rota.id }}</td>
+                                        <td>{{ rota.data_fim_real|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ rota.veiculo.placa }}</td>
+                                        <td>{{ rota.entregas.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhum histórico de rotas concluídas para este motorista.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

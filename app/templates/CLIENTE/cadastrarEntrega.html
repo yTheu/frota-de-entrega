@@ -1,21 +1,30 @@
 {% extends './clienteBase.html' %}
+{% load static %}
+
+{% block title %}Solicitar Nova Entrega{% endblock %}
 
 {% block cliente_content %}
 <div class="container my-4">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h3>Solicitar Nova Entrega</h3>
+            <h3><i class="fas fa-plus-circle me-2"></i>Solicitar Nova Entrega</h3>
         </div>
         <div class="card-body">
+            <p class="card-text text-muted">Preencha os detalhes abaixo para agendar sua entrega.</p>
+
             <form method="post" novalidate>
                 {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
                 
                 <div class="row">
                     <div class="col-md-6">
                         <fieldset class="border p-3 mb-4">
                             <legend class="float-none w-auto px-2 h6">Endereço de Origem</legend>
-                            <div class="mb-2">{{ form.cep_origem.label_tag }} {{ form.cep_origem }}</div>
-                            <div class="mb-2">{{ form.rua_origem.label_tag }} {{ form.rua_origem }}</div>
+                            <div class="mb-2">{{ form.cep_origem.label_tag }} {{ form.cep_origem }} {% if form.cep_origem.errors %}<div class="text-danger small mt-1">{{ form.cep_origem.errors|striptags }}</div>{% endif %}</div>
+                            <div class="mb-2">{{ form.rua_origem.label_tag }} {{ form.rua_origem }} {% if form.rua_origem.errors %}<div class="text-danger small mt-1">{{ form.rua_origem.errors|striptags }}</div>{% endif %}</div>
                             <div class="row">
                                 <div class="col-sm-8 mb-2">{{ form.bairro_origem.label_tag }} {{ form.bairro_origem }}</div>
                                 <div class="col-sm-4 mb-2">{{ form.numero_origem.label_tag }} {{ form.numero_origem }}</div>
@@ -29,8 +38,8 @@
                     <div class="col-md-6">
                         <fieldset class="border p-3 mb-4">
                             <legend class="float-none w-auto px-2 h6">Endereço de Destino</legend>
-                            <div class="mb-2">{{ form.cep_destino.label_tag }} {{ form.cep_destino }}</div>
-                            <div class="mb-2">{{ form.rua_destino.label_tag }} {{ form.rua_destino }}</div>
+                            <div class="mb-2">{{ form.cep_destino.label_tag }} {{ form.cep_destino }} {% if form.cep_destino.errors %}<div class="text-danger small mt-1">{{ form.cep_destino.errors|striptags }}</div>{% endif %}</div>
+                            <div class="mb-2">{{ form.rua_destino.label_tag }} {{ form.rua_destino }} {% if form.rua_destino.errors %}<div class="text-danger small mt-1">{{ form.rua_destino.errors|striptags }}</div>{% endif %}</div>
                             <div class="row">
                                 <div class="col-sm-8 mb-2">{{ form.bairro_destino.label_tag }} {{ form.bairro_destino }}</div>
                                 <div class="col-sm-4 mb-2">{{ form.numero_destino.label_tag }} {{ form.numero_destino }}</div>
@@ -56,14 +65,15 @@
                 </fieldset>
 
                 <fieldset class="border p-3 mb-4">
-                     <legend class="float-none w-auto px-2 h6">Agendamento e Observações</legend>
-                    <div class="mb-3">{{ form.data_entrega_prevista.label_tag }} {{ form.data_entrega_prevista }}</div>
+                     <legend class="float-none w-auto px-2 h6">Observações Adicionais</legend>
                     <div class="mb-3">{{ form.observacoes_entrega.label_tag }} {{ form.observacoes_entrega }}</div>
                 </fieldset>
                 
                 <div class="d-flex justify-content-end">
                     <a href="{% url 'dashboard_cliente' %}" class="btn btn-secondary me-2">Cancelar</a>
-                    <button type="submit" class="btn btn-success">Agendar Entrega</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane me-2"></i>Agendar Entrega
+                    </button>
                 </div>
             </form>
         </div>

@@ -1,51 +1,102 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}Lista de Entregas{% endblock %}
+{% block title %}Gerenciamento de Entregas{% endblock %}
 
 {% block content %}
-	<div class="d-flex justify-content-between align-items-center mb-3">
-		<div>
-			<h1>Entregas</h1>
-			<p class="text-muted">Lista de entregas cadastradas</p>
-		</div>
-		<div>
-			<a class="btn btn-primary" href="#">Cadastrar Entrega</a>
-		</div>
-	</div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Gerenciamento de Entregas</h1>
+            <p class="text-muted">Filtre, busque e gerencie todas as entregas do sistema.</p>
+        </div>
+        <div>
+            {# talvez adicionar um cadastrar entrega dps#}
+        </div>
+    </div>
 
-	<div class="card">
-		<div class="card-body">
-			<table class="table table-striped">
-				<thead>
-					<tr>
-						<th>ID</th>
-						<th>Cliente</th>
-						<th>Endereço</th>
-						<th>Status</th>
-						<th>Veículo</th>
-						<th>Motorista</th>
-						<th>Data Prevista</th>
-						<th>Ações</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for e in entregas %}
-						<tr>
-							<td>{{ e.id }}</td>
-							<td>{{ e.cliente.nome_empresa }}</td>
-							<td>{{ e.destino }}</td>
-							<td>{{ e.get_status_display }}</td>
-							<td>{{ e.veiculo }}</td>
-							<td>{{ e.motorista }}</td>
-							<td>{{ e.data_inicio_prevista }}</td>
-							<td><a href="#">Detalhes</a> | <a href="#">Editar</a></td>
-						</tr>
-					{% empty %}
-						<tr><td colspan="7">Nenhuma entrega cadastrada.</td></tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	</div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar por cliente, placa, motorista ou cidade..." value="{{ current_query }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="status" class="form-control">
+                        <option value="">Filtrar por Status</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex">
+                    <button type="submit" class="btn btn-success flex-grow-1 mr-2">Filtrar</button>
+                    <a href="{% url 'lista_entregas' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Destino</th>
+                            <th>Status</th>
+                            <th>Veículo (Rota)</th>
+                            <th>Motorista (Rota)</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entrega in entregas %}
+                            <tr>
+                                <td><strong>{{ entrega.id }}</strong></td>
+                                <td>{{ entrega.cliente.nome_empresa|default:"N/A" }}</td>
+                                <td>{{ entrega.destino.cidade|default:entrega.destino|truncatechars:30 }}</td>
+                                <td>
+                                    {% if entrega.status == 'ENTREGUE' %}<span class="badge bg-success text-white">{{ entrega.get_status_display }}</span>
+                                    {% elif entrega.status == 'EM_ROTA' %}<span class="badge bg-primary text-white">{{ entrega.get_status_display }}</span>
+                                    {% elif entrega.status == 'PROBLEMA' %}<span class="badge bg-danger text-white">{{ entrega.get_status_display }}</span>
+                                    {% else %}<span class="badge bg-secondary text-white">{{ entrega.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ entrega.rota.veiculo.placa|default:"-" }}</td>
+                                <td>{{ entrega.rota.motorista.nome|default:"-" }}</td>
+                                <td>
+                                    <a href="{% url 'detalhes_entrega_admin' entrega_id=entrega.id %}" class="btn btn-sm btn-outline-info">Detalhes</a>
+                                    {# tlz adicionar editar e deletar dps #}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">Nenhuma entrega encontrada com os filtros aplicados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if entregas.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if entregas.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page=1&q={{ current_query }}&status={{ current_status }}">&laquo;</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ entregas.previous_page_number }}&q={{ current_query }}&status={{ current_status }}">Anterior</a></li>
+                    {% endif %}
+
+                    <li class="page-item disabled"><span class="page-link">Página {{ entregas.number }} de {{ entregas.paginator.num_pages }}</span></li>
+
+                    {% if entregas.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ entregas.next_page_number }}&q={{ current_query }}&status={{ current_status }}">Próxima</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ entregas.paginator.num_pages }}&q={{ current_query }}&status={{ current_status }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
 {% endblock %}

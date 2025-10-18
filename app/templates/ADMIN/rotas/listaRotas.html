@@ -1,0 +1,95 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Gerenciamento de Rotas{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Gerenciamento de Rotas</h1>
+            <p class="text-muted">Visualize e gerencie todas as rotas planejadas e em andamento.</p>
+        </div>
+        <div>
+            <a class="btn btn-primary" href="{% url 'comecar_planejamento_rotas' %}"><i class="fas fa-play-circle mr-2"></i>Planejar Rotas</a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-9">
+                    <select name="status" class="form-control">
+                        <option value="">Filtrar por Status da Rota</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex">
+                    <button type="submit" class="btn btn-success flex-grow-1 mr-2">Filtrar</button>
+                    <a href="{% url 'lista_rotas' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th># Rota</th>
+                            <th>Status</th>
+                            <th>Veículo</th>
+                            <th>Motorista</th>
+                            <th>Nº Entregas</th>
+                            <th>Criação</th>
+                            <th>Início Previsto</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rota in rotas %}
+                            <tr>
+                                <td><strong>#{{ rota.id }}</strong></td>
+                                <td>
+                                    {% if rota.status == 'CONCLUIDA' %}<span class="badge bg-success text-white">{{ rota.get_status_display }}</span>
+                                    {% elif rota.status == 'EM_ROTA' %}<span class="badge bg-primary text-white">{{ rota.get_status_display }}</span>
+                                    {% elif rota.status == 'PLANEJADA' %}<span class="badge bg-warning text-dark">{{ rota.get_status_display }}</span>
+                                    {% else %}<span class="badge bg-secondary text-white">{{ rota.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ rota.veiculo.placa }}</td>
+                                <td>{{ rota.motorista.nome }}</td>
+                                <td>{{ rota.entregas.count }}</td>
+                                <td>{{ rota.data_criacao|date:"d/m/y H:i" }}</td>
+                                <td>{{ rota.data_inicio_prevista|date:"d/m/y H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'detalhes_rota' rota_id=rota.id%}" class="btn btn-sm btn-outline-info">Detalhes</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">Nenhuma rota encontrada com os filtros aplicados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if rotas.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if rotas.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ rotas.previous_page_number }}&status={{ current_status }}">Anterior</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">Página {{ rotas.number }} de {{ rotas.paginator.num_pages }}</span></li>
+                    {% if rotas.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ rotas.next_page_number }}&status={{ current_status }}">Próxima</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

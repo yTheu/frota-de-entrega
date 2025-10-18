@@ -5,7 +5,7 @@
 
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>Minhas Rotas Planejadas e Ativas</h3>
+        <h3>Minhas Rotas</h3>
     </div>
 
     {% if rotas %}
@@ -13,7 +13,6 @@
             <div class="card mb-4 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Rota #{{ rota.id }}</h5>
-                    {# Badge colorido para o status da rota #}
                     {% if rota.status == 'PLANEJADA' %}
                         <span class="badge bg-warning text-dark">Planejada</span>
                     {% elif rota.status == 'EM_ROTA' %}
@@ -21,51 +20,73 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Veículo:</strong> {{ rota.veiculo.modelo }} ({{ rota.veiculo.placa }})</p>
-                            <p><strong>Início Previsto:</strong> {{ rota.data_inicio_prevista|date:"d/m/Y H:i" }}</p>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <p class="mb-1"><strong><i class="fas fa-truck me-2"></i>Veículo:</strong></p>
+                            <p>{{ rota.veiculo.modelo }} ({{ rota.veiculo.placa }})</p>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Total de Entregas na Rota:</strong> {{ rota.entregas.count }}</p>
-                            {# Você pode adicionar distância e duração aqui se tiver os dados da API #}
-                            {# <p><strong>Distância Estimada:</strong> {{ rota.distancia_total_km }} km</p> #}
+                        <div class="col-md-4">
+                            <p class="mb-1"><strong><i class="fas fa-road me-2"></i>Distância Estimada:</strong></p>
+                            <p>{{ rota.distancia_total_km|floatformat:1|default:"N/A" }} km</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-1"><strong><i class="fas fa-clock me-2"></i>Duração Estimada:</strong></p>
+                            <p>{{ rota.duracao_estimada_minutos|default:"N/A" }} minutos</p>
                         </div>
                     </div>
                     
                     <hr>
-                    <h6>Entregas nesta Rota:</h6>
-                    <ul class="list-group list-group-flush">
-                        {% for entrega in rota.entregas.all %}
-                            <li class="list-group-item">
-                                Entrega #{{ entrega.id }} para <strong>{{ entrega.cliente.nome_empresa|default:'N/A' }}</strong>
-                                <br>
-                                <small class="text-muted">Status: {{ entrega.get_status_display }}</small>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    <h6>Entregas nesta Rota ({{ rota.entregas.count }})</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th># Entrega</th>
+                                    <th>Destino</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entrega in rota.entregas.all %}
+                                    <tr>
+                                        <td><strong>#{{ entrega.id }}</strong></td>
+                                        <td>{{ entrega.destino.cidade|default:entrega.destino }}</td>
+                                        <td>
+                                            {% if entrega.status == 'ALOCADA' %}<span class="badge bg-secondary">Aguardando</span>
+                                            {% elif entrega.status == 'EM_ROTA' %}<span class="badge bg-info">Em Rota</span>
+                                            {% else %}<span class="badge bg-light text-dark">{{ entrega.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="card-footer text-right bg-light">
-                    {# Lógica do botão de ação #}
+                <div class="card-footer d-flex justify-content-end bg-light">
                     {% if rota.status == 'PLANEJADA' %}
                         <form action="{% url 'iniciar_rota' rota.id %}" method="post">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-success">
-                                <i class="fas fa-play-circle mr-2"></i>Iniciar Rota
+                                <i class="fas fa-play-circle me-2"></i>Iniciar Rota
                             </button>
                         </form>
                     {% elif rota.status == 'EM_ROTA' %}
-                        <a href="{% url 'dashboard_motorista' %}" class="btn btn-info disabled" aria-disabled="true">
-                            <i class="fas fa-route mr-2"></i>Rota em Andamento
+                        <a href="{% url 'dashboard_motorista' %}" class="btn btn-primary disabled" aria-disabled="true">
+                            <i class="fas fa-route me-2"></i>Rota em Andamento
                         </a>
                     {% endif %}
                 </div>
             </div>
         {% endfor %}
     {% else %}
-        <div class="alert alert-info">
-            Você não tem nenhuma rota planejada ou em andamento no momento.
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-coffee fa-3x text-muted mb-3"></i>
+                <h4 class="card-title">Nenhuma Rota Atribuída</h4>
+                <p class="card-text">Você não tem nenhuma rota planejada ou em andamento no momento. Pode descansar, meu patrão!.</p>
+                <a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary mt-2">Voltar ao Painel</a>
+            </div>
         </div>
     {% endif %}
-
 {% endblock %}

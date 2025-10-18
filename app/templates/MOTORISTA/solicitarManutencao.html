@@ -1,13 +1,60 @@
-{% extends 'base.html' %}
+{% extends './motoristaBase.html' %}
+{% load static %}
 
 {% block title %}Solicitar Manutenção{% endblock %}
 
 {% block content %}
-<h2>Solicitar Manutenção</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Enviar solicitação</button>
-    <a class="btn btn-secondary" href="{% url 'dashboard_motorista' %}">Cancelar</a>
-</form>
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3><i class="fas fa-tools me-2"></i>Solicitar Manutenção</h3>
+        </div>
+        <div class="card-body">
+            {% if veiculo %}
+                <p class="card-text text-muted mb-4">Descreva o problema ou a necessidade de manutenção para o veículo <strong>{{ veiculo.modelo }} ({{ veiculo.placa }})</strong>.</p>
+                
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.tipo.label_tag }}
+                            {{ form.tipo }}
+                            {% if form.tipo.errors %}<div class="text-danger small mt-1">{{ form.tipo.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.data.label_tag }}
+                            {{ form.data }}
+                            {% if form.data.errors %}<div class="text-danger small mt-1">{{ form.data.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.descricao.label_tag }}
+                        {{ form.descricao }}
+                        {% if form.descricao.errors %}<div class="text-danger small mt-1">{{ form.descricao.errors|striptags }}</div>{% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary me-2">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Solicitação
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h5 class="alert-heading">Ação Indisponível</h5>
+                    <p class="mb-0">Você precisa estar em uma rota para solicitar uma manutenção.</p>
+                    <a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary btn-sm mt-3">Voltar ao Painel</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

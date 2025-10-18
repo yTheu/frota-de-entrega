@@ -20,6 +20,7 @@
                             <tr>
                                 <th># Pedido</th>
                                 <th>Data do Pedido</th>
+                                <th>Previsão de Entrega</th>
                                 <th>Carga</th>
                                 <th>Status</th>
                                 <th>Ações</th>
@@ -30,6 +31,7 @@
                                 <tr>
                                     <td><strong>#{{ pedido.id }}</strong></td>
                                     <td>{{ pedido.data_pedido|date:"d/m/Y" }}</td>
+                                    <td>{{ pedido.data_entrega_prevista|date:"d/m/Y" }}</td>
                                     <td>{{ pedido.descricao_carga|truncatechars:50 }}</td>
                                     <td>
                                         {# Badge colorido para o status, para fácil identificação #}

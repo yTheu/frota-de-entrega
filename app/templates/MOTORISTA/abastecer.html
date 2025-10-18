@@ -1,16 +1,56 @@
-{% extends 'base.html' %}
+{% extends './motoristaBase.html' %}
+{% load static %}
 
-    {% block title %}Registrar Abastecimento{% endblock %}
+{% block title %}Registrar Abastecimento{% endblock %}
 
-    {% block content %}
-    <h2>Registrar Novo Abastecimento</h2>
+{% block content %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3><i class="fas fa-gas-pump me-2"></i>Registrar Abastecimento</h3>
+        </div>
+        <div class="card-body">
+            {% if veiculo %}
+                <p class="card-text text-muted mb-4">Preencha os dados do abastecimento para o veículo <strong>{{ veiculo.modelo }} ({{ veiculo.placa }})</strong>.</p>
+                
+                <form method="post" novalidate>
+                    {% csrf_token %}
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Salvar Abastecimento</button>
-    </form>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.litros.label_tag }}
+                            {{ form.litros }}
+                            {% if form.litros.errors %}<div class="text-danger small mt-1">{{ form.litros.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.custo.label_tag }}
+                            {{ form.custo }}
+                            {% if form.custo.errors %}<div class="text-danger small mt-1">{{ form.custo.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.dataAbastecimento.label_tag }}
+                        {{ form.dataAbastecimento }}
+                        {% if form.dataAbastecimento.errors %}<div class="text-danger small mt-1">{{ form.dataAbastecimento.errors|striptags }}</div>{% endif %}
+                    </div>
 
-    <p class="mt-3"><a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary">Voltar para o Dashboard</a></p>
+                    <hr class="my-4">
 
-    {% endblock %}
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary me-2">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Registrar
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h5 class="alert-heading">Ação Indisponível</h5>
+                    <p class="mb-0">Você precisa estar em uma rota para registrar um abastecimento.</p>
+                    <a href="{% url 'dashboard_motorista' %}" class="btn btn-secondary btn-sm mt-3">Voltar ao Painel</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

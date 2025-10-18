@@ -1,0 +1,94 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Detalhes da Rota #{{ rota.id }}{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Detalhes da Rota #{{ rota.id }}</h3>
+        <div>
+            <a href="{% url 'lista_rotas' %}" class="btn btn-secondary">Voltar para a Lista</a>
+            {# tlv add botão p cancelar rota #}
+            {# <a href="#" class="btn btn-danger">Cancelar Rota</a> #}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">Status da Rota</div>
+                <div class="card-body text-center">
+                    {% if rota.status == 'CONCLUIDA' %}<h4 class="text-success"><i class="fas fa-check-circle mr-2"></i>{{ rota.get_status_display }}</h4>
+                    {% elif rota.status == 'EM_ROTA' %}<h4 class="text-primary"><i class="fas fa-route mr-2"></i>{{ rota.get_status_display }}</h4>
+                    {% elif rota.status == 'PLANEJADA' %}<h4 class="text-warning"><i class="fas fa-clipboard-list mr-2"></i>{{ rota.get_status_display }}</h4>
+                    {% else %}<h4 class="text-muted">{{ rota.get_status_display }}</h4>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Alocação</div>
+                <div class="card-body">
+                    <p><strong>Veículo:</strong> <a href="{% url 'detalhes_veiculo' rota.veiculo.id %}">{{ rota.veiculo }}</a></p>
+                    <p><strong>Motorista:</strong> <a href="{% url 'detalhes_motorista' rota.motorista.id %}">{{ rota.motorista }}</a></p>
+                </div>
+            </div>
+
+            <div class="card">
+                 <div class="card-header">Dados da Viagem</div>
+                 <div class="card-body">
+                     <p><strong>Distância Estimada:</strong> {{ rota.distancia_total_km|default:"N/A" }} km</p>
+                     <p><strong>Duração Estimada:</strong> {{ rota.duracao_estimada_minutos|default:"N/A" }} minutos</p>
+                     <hr>
+                     <p><strong>Início Previsto:</strong> {{ rota.data_inicio_prevista|date:"d/m/y H:i" }}</p>
+                     <p><strong>Início Real:</strong> {{ rota.data_inicio_real|date:"d/m/y H:i"|default:"Aguardando" }}</p>
+                     <p><strong>Fim Real:</strong> {{ rota.data_fim_real|date:"d/m/y H:i"|default:"-" }}</p>
+                 </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    Entregas nesta Rota ({{ rota.entregas.count }})
+                </div>
+                <div class="card-body">
+                    {% if rota.entregas.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th># Entrega</th>
+                                        <th>Cliente</th>
+                                        <th>Destino</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entrega in rota.entregas.all %}
+                                    <tr>
+                                        <td><strong>#{{ entrega.id }}</strong></td>
+                                        <td>{{ entrega.cliente.nome_empresa|default:entrega.cliente.user.username }}</td>
+                                        <td>{{ entrega.destino.cidade|default:entrega.destino }}</td>
+                                        <td>
+                                            {% if entrega.status == 'ENTREGUE' %}<span class="badge bg-success text-white">{{ entrega.get_status_display }}</span>
+                                            {% elif entrega.status == 'EM_ROTA' %}<span class="badge bg-primary text-white">{{ entrega.get_status_display }}</span>
+                                            {% else %}<span class="badge bg-secondary text-white">{{ entrega.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="{% url 'detalhes_entrega_admin' entrega.id %}" class="btn btn-sm btn-outline-info">Ver</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma entrega associada a esta rota.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -8,7 +8,7 @@ urlpatterns = [
     path('teste/', views.mapa_rastreio, name='mapa_rastreio'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
-    path('register/', views.register_cliente, name='register_cliente'),
+    path('registrar/', views.registrar_cliente, name='registrar_cliente'),
     path('dashboard/', views.dashboard, name='dashboard'), # manda pro dashboard específico dele
 
     # url do Administrador (dashboard personalizado)

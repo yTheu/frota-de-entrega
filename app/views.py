@@ -15,7 +15,7 @@ from django.db.models import OuterRef, Q, Subquery
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from .forms import AbastecimentoForm, EntregaForm, LoginForm,ManutencaoForm, MotoristaForm, VeiculoForm
+from .forms import AbastecimentoForm, EntregaForm, LoginForm,ManutencaoForm, MotoristaForm, VeiculoForm, RegistroForm
 from .models import Abastecimento, Coordenada, Entrega, HistoricoEntrega, Manutencao, PerfilCliente, PerfilMotorista, Rota, Veiculo
 from .threads import executar_rota_em_thread
 
@@ -70,6 +70,26 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})
+
+def registrar_cliente(request):
+    if request.method == 'POST':
+        form = RegistroForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            
+            PerfilCliente.objects.create(
+                user=user,
+                nome_empresa=form.cleaned_data.get('nome_empresa'),
+                endereco=form.cleaned_data.get('endereco'),
+                telefone=form.cleaned_data.get('telefone')
+            )
+            
+            messages.success(request, 'Cadastro realizado com sucesso! Por favor, faça login para continuar.')
+            return redirect('login')
+    else:
+        form = RegistroForm()
+        
+    return render(request, 'registration/registrar_cliente.html', {'form': form})
 
 @login_required
 def logout_view(request):
@@ -675,35 +695,6 @@ def status_pedido(request, pk):
     }
     
     return render(request, 'CLIENTE/acompanharEntrega.html', contexto)
-
-def register_cliente(request):
-    if request.method == 'POST':
-        user_form = UserCreationForm(request.POST)
-        nome_empresa = request.POST.get('nome_empresa', '')
-        endereco = request.POST.get('endereco', '')
-        telefone = request.POST.get('telefone', '')
-        if user_form.is_valid():
-            with transaction.atomic():
-                user = user_form.save()
-                PerfilCliente.objects.create(
-                    user=user,
-                    nome_empresa=nome_empresa or None,
-                    endereco=endereco or None,
-                    telefone=telefone or None,
-                )
-                try:
-                    grupo_cliente, _ = Group.objects.get_or_create(name='Cliente')
-                    user.groups.add(grupo_cliente)
-                except Exception:
-                    pass
-                messages.success(request, 'Cadastro realizado com sucesso. Faça login para continuar.')
-                return redirect('login')
-        else:
-            messages.error(request, 'Por favor, corrija os erros no formulário.')
-    else:
-        user_form = UserCreationForm()
-    return render(request, 'registration/register_cliente.html', {'user_form': user_form})
-
 
 @login_required
 @user_passes_test(is_admin)

@@ -30,7 +30,7 @@ def agrupar_entregas_por_proximidade(entregas, raio_max_km=200):
             
         clusters.append(novo_cluster)
         
-    return clusters
+    return clusters #grupo com entregas
 
 def chamar_google_maps_api(cluster_de_entregas):
     try:
@@ -100,9 +100,9 @@ class Command(BaseCommand):
                 continue
             
             if dados_da_api.get('trajeto_polyline'):
-                 print(f"  > DIAGNÓSTICO: O dicionário 'dados_da_api' CONTÉM a polyline.")
+                print(f"  > DIAGNÓSTICO: O dicionário 'dados_da_api' CONTÉM a polyline.")
             else:
-                 print(f"  > DIAGNÓSTICO: ERRO! O dicionário 'dados_da_api' NÃO contém a polyline antes de chamar o Manager.")
+                print(f"  > DIAGNÓSTICO: ERRO! O dicionário 'dados_da_api' NÃO contém a polyline antes de chamar o Manager.")
 
             ids_das_entregas = [entrega.id for entrega in cluster]
             

@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from .models import Veiculo, PerfilMotorista, Entrega, Manutencao, Abastecimento, Coordenada, PerfilCliente
 
@@ -17,20 +17,22 @@ class LoginForm(AuthenticationForm):
             'placeholder': 'Senha'
         })
 
-class RegistroForm(forms.ModelForm):
+
+class ClienteRegistrationForm(UserCreationForm):
+    first_name = forms.CharField(max_length=150, required=False, label="Nome")
+    last_name = forms.CharField(max_length=150, required=False, label="Sobrenome")
+    email = forms.EmailField(required=True, label="E-mail")
+    
     nome_empresa = forms.CharField(max_length=100, required=False, label="Nome da Empresa")
     endereco = forms.CharField(max_length=255, required=False, label="Endereço Principal")
     telefone = forms.CharField(max_length=20, required=False, label="Telefone de Contato")
 
-    class Meta:
+    class Meta(UserCreationForm.Meta):
         model = User
-        fields = [
-            'first_name', 
-            'last_name', 
-            'email']
+        fields = UserCreationForm.Meta.fields + ('first_name', 'last_name', 'email')
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)   
+        super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
 

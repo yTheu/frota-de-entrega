@@ -15,7 +15,7 @@ from django.db.models import OuterRef, Q, Subquery
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from .forms import AbastecimentoForm, EntregaForm, LoginForm,ManutencaoForm, MotoristaForm, VeiculoForm, RegistroForm
+from .forms import AbastecimentoForm, EntregaForm, LoginForm, ManutencaoForm, MotoristaForm, VeiculoForm, ClienteRegistrationForm
 from .models import Abastecimento, Coordenada, Entrega, HistoricoEntrega, Manutencao, PerfilCliente, PerfilMotorista, Rota, Veiculo
 from .threads import executar_rota_em_thread
 
@@ -73,7 +73,7 @@ def login_view(request):
 
 def registrar_cliente(request):
     if request.method == 'POST':
-        form = RegistroForm(request.POST)
+        form = ClienteRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
             
@@ -86,8 +86,10 @@ def registrar_cliente(request):
             
             messages.success(request, 'Cadastro realizado com sucesso! Por favor, faça login para continuar.')
             return redirect('login')
+        else:
+            print(form.errors.as_json())
     else:
-        form = RegistroForm()
+        form = ClienteRegistrationForm()
         
     return render(request, 'registration/registrar_cliente.html', {'form': form})
 

@@ -49,6 +49,7 @@ class MotoristaForm(forms.ModelForm):
         model = PerfilMotorista
         fields = ['nome', 'cpf', 'num_cnh', 'disponivel']
 
+LIMITE_MAXIMO_PESO_KG = 1000.00
 class EntregaForm(forms.ModelForm):
     #origem 
     cep_origem = forms.CharField(label='CEP de Origem', max_length=9)
@@ -78,6 +79,7 @@ class EntregaForm(forms.ModelForm):
             'observacoes_entrega'
         ]
         widgets = {
+            'peso_kg': forms.NumberInput(attrs={'max': str(LIMITE_MAXIMO_PESO_KG)}),
             'data_entrega_prevista': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'observacoes_entrega': forms.Textarea(attrs={'rows': 3}),
         }

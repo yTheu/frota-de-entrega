@@ -19,6 +19,14 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fas fa-route mr-2"></i>Rota Ativa: #{{ rota_ativa.id }}</h5>
+                        {% if rota_ativa.status == 'EM_ROTA' %}
+                            <form action="{% url 'encerrar_rota_manual' rota_ativa.id %}" method="post" onsubmit="return confirm('Tem certeza que deseja encerrar esta rota manualmente? Faça isso apenas se todas as entregas foram concluídas.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm" title="Encerrar Rota Manualmente">
+                                    <i class="fas fa-stop-circle"></i> Encerrar
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <p><strong>Veículo:</strong> {{ rota_ativa.veiculo.modelo }} ({{ rota_ativa.veiculo.placa }})</p>

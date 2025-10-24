@@ -80,7 +80,7 @@
                                 </td>
                                 <td>
                                     <a href="{% url 'detalhes_veiculo' veiculo_id=veiculo.id%}" class="btn btn-sm btn-outline-info">Detalhes</a>
-                                    <a href="#" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                    <a href="{% url 'editar_veiculo' pk=veiculo.id%}" class="btn btn-sm btn-outline-secondary">Editar</a>
                                 </td>
                             </tr>
                         {% empty %}

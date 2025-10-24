@@ -1,0 +1,39 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Detalhes da Manutenção #{{ manutencao.id }}{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Detalhes da Manutenção #{{ manutencao.id }}</h3>
+        <div>
+            <a href="{% url 'lista_manutencoes' %}" class="btn btn-secondary">Voltar</a>
+            <a href="{% url 'editar_manutencao' manutencao.id %}" class="btn btn-primary">Editar</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Veículo:</strong> <a href="{% url 'detalhes_veiculo' manutencao.veiculo.id %}">{{ manutencao.veiculo }}</a></p>
+                    <p><strong>Tipo:</strong> {{ manutencao.get_tipo_display }}</p>
+                    <p><strong>Data:</strong> {{ manutencao.data|date:"d/m/Y" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong>
+                        {% if manutencao.status == 'CONCLUIDA' %}<span class="badge bg-success text-white">{{ manutencao.get_status_display }}</span>
+                        {% elif manutencao.status == 'PENDENTE' %}<span class="badge bg-warning text-dark">{{ manutencao.get_status_display }}</span>
+                        {% elif manutencao.status == 'SOLICITADA' %}<span class="badge bg-info text-white">{{ manutencao.get_status_display }}</span>
+                        {% else %}<span class="badge bg-secondary text-white">{{ manutencao.get_status_display }}</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Custo:</strong> R$ {{ manutencao.custo|floatformat:2|default:"Ainda não definido" }}</p>
+                    <p><strong>Solicitante:</strong> {{ manutencao.motorista.nome|default:"Admin" }}</p>
+                </div>
+            </div>
+            <hr>
+            <h5>Descrição do Problema / Serviço:</h5>
+            <p>{{ manutencao.descricao|linebreaksbr }}</p>
+        </div>
+    </div>
+{% endblock %}

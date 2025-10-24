@@ -3,7 +3,7 @@
 
 {% block title %}Meu Painel{% endblock %}
 
-{% block cliente_content %}
+{% block content %}
     <div class="mb-4">
         <h3>Bem-vindo, {{ cliente.nome_empresa|default:user.username }}!</h3>
         <p class="text-muted">Aqui está um resumo rápido das suas atividades.</p>
@@ -13,7 +13,7 @@
         <div class="col-md-4 mb-4">
             <div class="card text-white bg-primary h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-box-open mr-2"></i>Total de Pedidos</h5>
+                    <h5 class="card-title"><i class="fas fa-box-open mr-2"></i> Total de Pedidos</h5>
                     <p class="card-text display-4">{{ total_pedidos }}</p>
                 </div>
             </div>
@@ -21,7 +21,7 @@
         <div class="col-md-4 mb-4">
             <div class="card text-white bg-info h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-truck mr-2"></i>Pedidos em Rota</h5>
+                    <h5 class="card-title"><i class="fas fa-truck mr-2"></i> Pedidos em Rota</h5>
                     <p class="card-text display-4">{{ pedidos_em_rota }}</p>
                 </div>
             </div>
@@ -29,7 +29,7 @@
         <div class="col-md-4 mb-4">
             <div class="card text-white bg-success h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-check-circle mr-2"></i>Pedidos Entregues</h5>
+                    <h5 class="card-title"><i class="fas fa-check-circle mr-2"></i> Pedidos Entregues</h5>
                     <p class="card-text display-4">{{ pedidos_entregues }}</p>
                 </div>
             </div>
@@ -57,21 +57,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {# Mostra apenas os 5 pedidos mais recentes no dashboard #}
                             {% for pedido in entregas_cadastradas|slice:":5" %}
                                 <tr>
                                     <td><strong>#{{ pedido.id }}</strong></td>
                                     <td>{{ pedido.data_pedido|date:"d/m/Y" }}</td>
                                     <td>{{ pedido.descricao_carga|truncatechars:40 }}</td>
                                     <td>
-                                        {# Reutilizando a mesma lógica de badges coloridos #}
                                         {% if pedido.status == 'ENTREGUE' %}<span class="badge bg-success text-white">{{ pedido.get_status_display }}</span>
                                         {% elif pedido.status == 'EM_ROTA' %}<span class="badge bg-primary text-white">{{ pedido.get_status_display }}</span>
                                         {% else %}<span class="badge bg-secondary text-white">{{ pedido.get_status_display }}</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-right">
-                                        {# Link corrigido para a nova URL de detalhes #}
                                         <a href="{% url 'status_pedido' pk=pedido.id %}" class="btn btn-sm btn-outline-info">
                                             Rastrear
                                         </a>

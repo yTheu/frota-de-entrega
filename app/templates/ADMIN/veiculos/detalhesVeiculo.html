@@ -1,4 +1,5 @@
-{% extends 'admin_base.html' %}
+{% extends 'admin_base.html' %} 
+{% load static %} 
 
 {% block title %}Detalhes do Veículo: {{ veiculo.placa }}{% endblock %}
 
@@ -19,98 +20,148 @@
                     <p><strong>Placa:</strong> {{ veiculo.placa }}</p>
                     <p><strong>Modelo:</strong> {{ veiculo.modelo }}</p>
                     <p><strong>Quilometragem:</strong> {{ veiculo.km }} km</p>
-                    <p><strong>Última Manutenção:</strong> {{ veiculo.ultimaManutencao|date:"d/m/Y"|default:"Nunca realizada" }}</p>
-                    {% if veiculo.precisa_manutencao %}
-                        <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Manutenção preventiva recomendada!</p>
+                    <p><strong>Última Manutenção Preventiva:</strong> {{ veiculo.ultimaManutencao|date:"d/m/Y"|default:"Nunca realizada" }}</p>
+                    {# Alerta de Manutenção Preventiva (só mostra se não estiver já em manutenção) #}
+                    {% if veiculo.precisa_manutencao and veiculo.status != 'EM_MANUTENCAO' %}
+                        <p class="text-danger small mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Manutenção preventiva recomendada!</p>
                     {% endif %}
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">Status Atual</div>
+                <div class="card-header">Status Atual e Ações</div>
                 <div class="card-body">
+                    {# Bloco 1: Exibe o Alerta Principal do Status #}
                     {% if veiculo.status == 'DISPONIVEL' %}
-                        <div class="alert alert-success mb-0">
-                            <h5 class="alert-heading"><i class="fas fa-check-circle mr-2"></i>Disponível</h5>
+                        <div class="alert alert-success mb-3">
+                            <h5 class="alert-heading"><i class="fas fa-check-circle me-2"></i>Disponível</h5>
                             <p class="mb-0">Este veículo está livre para ser alocado a novas rotas.</p>
                         </div>
                     {% elif veiculo.status == 'EM_ROTA' or veiculo.status == 'EM_ENTREGA' %}
                         <div class="alert alert-primary mb-0">
-                            <h5 class="alert-heading"><i class="fas fa-route mr-2"></i>Em Rota</h5>
+                            <h5 class="alert-heading"><i class="fas fa-route me-2"></i>Em Rota</h5>
                             {% if rota_ativa %}
                                 <p>Atualmente na <strong>Rota #{{ rota_ativa.id }}</strong>.</p>
                                 <p class="mb-0"><strong>Motorista:</strong> {{ rota_ativa.motorista.nome }}</p>
+                            {% else %}
+                                <p class="mb-0">Atualmente em rota (sem detalhes da rota ativa).</p>
                             {% endif %}
                         </div>
                     {% elif veiculo.status == 'EM_MANUTENCAO' %}
                         <div class="alert alert-warning mb-0">
-                             <h5 class="alert-heading"><i class="fas fa-tools mr-2"></i>Em Manutenção</h5>
+                             <h5 class="alert-heading"><i class="fas fa-tools me-2"></i>Em Manutenção</h5>
                              <p class="mb-0">Este veículo está indisponível para rotas.</p>
+                             <p class="text-muted mt-2 mb-0"><small><i class="fas fa-spinner fa-spin me-1"></i>Aguardando conclusão da manutenção simulada...</small></p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">
+                             <h5 class="alert-heading">Status Desconhecido</h5>
+                             <p class="mb-0">O status atual é: {{ veiculo.get_status_display }}</p>
                         </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
 
-        <div class="col-lg-7">
+                    {# Exibe Solicitações Pendentes (se houver) #}
+                    {% if manutencoes_solicitadas %}
+                        <hr>
+                        <h6 class="text-danger"><i class="fas fa-wrench me-1"></i>Solicitações de Manutenção Pendentes:</h6>
+                        <ul class="list-group list-group-flush small mb-3">
+                            {% for solicitacao in manutencoes_solicitadas %}
+                                <li class="list-group-item px-0 py-1 d-flex justify-content-between align-items-center">
+                                    <span>{{ solicitacao.data|date:"d/m" }} - {{ solicitacao.descricao|truncatechars:40 }}</span>
+                                    <a href="{% url 'detalhes_manutencao' solicitacao.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1">Ver</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {# Bloco 2: Exibe o Botão de Ação (Condição Corrigida com ifs aninhados) #}
+                    {% comment %} Primeiro, verificamos se o veículo está disponível {% endcomment %}
+                    {% if veiculo.status == 'DISPONIVEL' %}
+                        
+                        {% comment %} Se estiver disponível, verificamos se precisa de manutenção OU tem solicitações {% endcomment %}
+                        {% if veiculo.precisa_manutencao or manutencoes_solicitadas %}
+                            
+                            <hr class="my-3"> {# Linha separadora #}
+                            
+                            {# Mostra a mensagem de alerta específica #}
+                            {% if veiculo.precisa_manutencao %}
+                                <p class="text-danger small mb-2"><i class="fas fa-exclamation-triangle me-1"></i>Manutenção preventiva recomendada!</p>
+                            {% elif manutencoes_solicitadas %}
+                                 <p class="text-danger small mb-2"><i class="fas fa-wrench me-1"></i>Existem solicitações de manutenção pendentes!</p>
+                            {% endif %}
+
+                            {# O formulário com o botão #}
+                            <form action="{% url 'iniciar_manutencao_veiculo' veiculo.id %}" method="post" onsubmit="return confirm('Tem certeza que deseja enviar este veículo para manutenção simulada? Ele ficará indisponível.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning w-100">
+                                    <i class="fas fa-tools me-2"></i>Enviar para Manutenção
+                                </button>
+                                <small class="text-muted d-block text-center mt-1">Isso iniciará a simulação de conserto.</small>
+                            </form>
+                            
+                        {% endif %} {# Fim do if interno (precisa_manutencao or manutencoes_solicitadas) #}
+                    {% endif %} {# Fim do if externo (veiculo.status == 'DISPONIVEL') #}
+
+                </div> </div> </div> <div class="col-lg-7">
             <div class="card">
                 <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs">
-                        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#rotas">Histórico de Rotas</a></li>
-                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#manutencoes">Manutenções</a></li>
-                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#abastecimentos">Abastecimentos</a></li>
+                    <ul class="nav nav-tabs card-header-tabs" id="historicoTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="rotas-tab" data-bs-toggle="tab" data-bs-target="#rotas" type="button" role="tab" aria-controls="rotas" aria-selected="true">Histórico de Rotas</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="manutencoes-tab" data-bs-toggle="tab" data-bs-target="#manutencoes" type="button" role="tab" aria-controls="manutencoes" aria-selected="false">Manutenções</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="abastecimentos-tab" data-bs-toggle="tab" data-bs-target="#abastecimentos" type="button" role="tab" aria-controls="abastecimentos" aria-selected="false">Abastecimentos</button>
+                        </li>
                     </ul>
                 </div>
                 <div class="card-body">
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="rotas">
+                    <div class="tab-content" id="historicoTabContent">
+                        <div class="tab-pane fade show active" id="rotas" role="tabpanel" aria-labelledby="rotas-tab">
                             {% if rotas_concluidas %}
-                                <table class="table table-sm">
-                                    <tbody>
-                                    {% for rota in rotas_concluidas %}
-                                        <tr>
-                                            <td>Rota #{{ rota.id }}</td>
-                                            <td>Concluída em {{ rota.data_fim_real|date:"d/m/Y" }}</td>
-                                            <td>Motorista: {{ rota.motorista.nome }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            {% else %}<p class="text-muted">Nenhum histórico de rotas.</p>{% endif %}
+                                <table class="table table-sm table-striped"><tbody>
+                                {% for rota in rotas_concluidas %}
+                                    <tr>
+                                        <td><a href="{% url 'detalhes_rota' rota.id %}">Rota #{{ rota.id }}</a></td>
+                                        <td>Concluída em {{ rota.data_fim_real|date:"d/m/Y H:i" }}</td>
+                                        <td>Motorista: {{ rota.motorista.nome }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody></table>
+                            {% else %}<p class="text-muted my-3 text-center">Nenhum histórico de rotas concluídas.</p>{% endif %}
                         </div>
-                        <div class="tab-pane fade" id="manutencoes">
+                        <div class="tab-pane fade" id="manutencoes" role="tabpanel" aria-labelledby="manutencoes-tab">
                             {% if historico_manutencao %}
-                                <table class="table table-sm">
-                                     <tbody>
-                                    {% for manutencao in historico_manutencao %}
-                                        <tr>
-                                            <td>{{ manutencao.data|date:"d/m/Y" }}</td>
-                                            <td>{{ manutencao.get_tipo_display }}</td>
-                                            <td>R$ {{ manutencao.custo }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                     </tbody>
-                                </table>
-                            {% else %}<p class="text-muted">Nenhum histórico de manutenção.</p>{% endif %}
+                                <table class="table table-sm table-striped"><tbody>
+                                {% for manutencao in historico_manutencao %}
+                                    <tr>
+                                        <td>{{ manutencao.data|date:"d/m/Y" }}</td>
+                                        <td>{{ manutencao.get_tipo_display }}</td>
+                                        <td>R$ {{ manutencao.custo|floatformat:2|default:"N/A" }}</td>
+                                        <td><a href="{% url 'detalhes_manutencao' manutencao.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1">Ver</a></td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody></table>
+                            {% else %}<p class="text-muted my-3 text-center">Nenhum histórico de manutenção.</p>{% endif %}
                         </div>
-                        <div class="tab-pane fade" id="abastecimentos">
+                        <div class="tab-pane fade" id="abastecimentos" role="tabpanel" aria-labelledby="abastecimentos-tab">
                             {% if historico_abastecimento %}
-                                <table class="table table-sm">
-                                     <tbody>
-                                    {% for item in historico_abastecimento %}
-                                        <tr>
-                                            <td>{{ item.dataAbastecimento|date:"d/m/Y" }}</td>
-                                            <td>{{ item.litros }} L</td>
-                                            <td>R$ {{ item.custo }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                     </tbody>
-                                </table>
-                            {% else %}<p class="text-muted">Nenhum histórico de abastecimento.</p>{% endif %}
+                                <table class="table table-sm table-striped"><tbody>
+                                {% for item in historico_abastecimento %}
+                                    <tr>
+                                        <td>{{ item.dataAbastecimento|date:"d/m/Y" }}</td>
+                                        <td>{{ item.litros }} L</td>
+                                        <td>R$ {{ item.custo|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody></table>
+                            {% else %}<p class="text-muted my-3 text-center">Nenhum histórico de abastecimento.</p>{% endif %}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </div> 
+    </div> 
 {% endblock %}

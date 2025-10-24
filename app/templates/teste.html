@@ -1,99 +1,189 @@
-
+{% extends 'admin_base.html' %} 
+{% load static %}
 
 {% block title %}Rastreio de Frota em Tempo Real{% endblock %}
 
 {% block extra_css %}
 <style>
-    #map {
-        height: 75vh;
+    #map-container {
+        position: relative;
+        height: 80vh;
         width: 100%;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    #loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        font-size: 1.2rem;
+        color: #6c757d;
+    }
+    .vehicle-list-group {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .list-group-item.active-vehicle {
+        cursor: pointer; 
+        transition: background-color 0.2s ease-in-out;
+    }
+    .list-group-item.active-vehicle:hover {
+        background-color: #e9ecef;
     }
 </style>
 {% endblock %}
 
 {% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3><i class="fas fa-map-marked-alt mr-2"></i>Rastreio da Frota em Tempo Real</h3>
+        <h3><i class="fas fa-map-marked-alt me-2"></i>Rastreio da Frota em Tempo Real</h3>
+        <span id="update-indicator" class="text-muted small"></span>
     </div>
 
-    <div id="map"></div>
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="map-container">
+                <div id="loading-overlay">
+                    <div class="spinner-border text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Carregando mapa...
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Veículos Ativos</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush vehicle-list-group" id="vehicle-list">
+                        <li class="list-group-item text-muted text-center" id="no-vehicles-msg">
+                            Aguardando dados...
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 
 {% block extra_js %}
 <script>
     let map;
-    let markers = {};
+    let markers = {}; 
+    const vehicleListElement = document.getElementById('vehicle-list');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const updateIndicator = document.getElementById('update-indicator');
+    const noVehiclesMsg = document.getElementById('no-vehicles-msg');
 
     function initMap() {
-        const initialPosition = { lat: -14.235, lng: -51.925 };
+        const initialPosition = { lat: -11.6, lng: -40.3 };
 
         map = new google.maps.Map(document.getElementById("map"), {
             center: initialPosition,
-            zoom: 5,
+            zoom: 7,
+            mapTypeControl: false,
+            streetViewControl: false
+        });
+
+        google.maps.event.addListenerOnce(map, 'tilesloaded', () => {
+            loadingOverlay.style.display = 'none';
         });
 
         atualizarPosicoesDosVeiculos();
-        setInterval(atualizarPosicoesDosVeiculos, 10000);
+        setInterval(atualizarPosicoesDosVeiculos, 5000); 
     }
 
     async function atualizarPosicoesDosVeiculos() {
+        updateIndicator.textContent = 'Atualizando...';
         try {
             const response = await fetch("{% url 'api_posicoes_veiculos' %}");
+            if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
             const data = await response.json();
 
-            console.log("Posições recebidas do servidor:", data.veiculos);
-            
+            vehicleListElement.innerHTML = '';
+            if (data.veiculos.length === 0) {
+                 vehicleListElement.appendChild(noVehiclesMsg);
+                 noVehiclesMsg.textContent = 'Nenhum veículo em rota.';
+            } else {
+                 if (noVehiclesMsg.parentNode === vehicleListElement) {
+                     vehicleListElement.removeChild(noVehiclesMsg);
+                 }
+            }
+
+
             const activeVehicleIds = new Set();
+
             data.veiculos.forEach(veiculo => {
                 const vehicleId = veiculo.id;
                 const position = { lat: veiculo.lat, lng: veiculo.lng };
                 activeVehicleIds.add(vehicleId);
 
                 if (!markers[vehicleId]) {
-                    console.log(`Criando novo marcador para o veículo ${veiculo.placa}`);
                     markers[vehicleId] = new google.maps.Marker({
                         position: position,
                         map: map,
                         title: `Veículo ${veiculo.placa}`,
+                        label: {
+                            text: "🚚",
+                            fontSize: "24px",
+                            color: "#000000"
+                        },
                         icon: {
-                            path: 'M22,14H20V12H17V11H15V6H9V11H7V12H4V14H3A1,1 0 0,0 2,15V19A1,1 0 0,0 3,20H4V21H6V20H18V21H20V20H21A1,1 0 0,0 22,19V15A1,1 0 0,0 22,14M6,18A2,2 0 0,1 4,16A2,2 0 0,1 6,14A2,2 0 0,1 8,16A2,2 0 0,1 6,18M18,18A2,2 0 0,1 16,16A2,2 0 0,1 18,14A2,2 0 0,1 20,16A2,2 0 0,1 18,18Z',
-                            fillColor: '#0d6efd',
-                            fillOpacity: 1,
-                            strokeWeight: 1,
-                            strokeColor: '#ffffff',
-                            rotation: 0,
-                            scale: 1.5,
-                            anchor: new google.maps.Point(12, 12)
+                            url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", // Pixel transparente
+                            scaledSize: new google.maps.Size(1, 1),
+                            anchor: new google.maps.Point(0, 0),
                         }
                     });
                 } else {
-                    console.log(`Atualizando posição do veículo ${veiculo.placa}`);
                     markers[vehicleId].setPosition(position);
-                    // Opcional: faz o mapa seguir o caminhão
-                    map.panTo(position); 
                 }
+
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item list-group-item-action active-vehicle';
+                listItem.innerHTML = `
+                    <strong>${veiculo.placa}</strong>
+                    <small class="d-block text-muted">Lat: ${veiculo.lat.toFixed(4)}, Lng: ${veiculo.lng.toFixed(4)}</small>
+                `;
+                listItem.onclick = () => { map.panTo(position); map.setZoom(14); };
+                vehicleListElement.appendChild(listItem);
+
             });
 
-            // Loop para remover marcadores de veículos que não estão mais em rota (continua igual)
-            for (const vehicleId in markers) {
-                if (!activeVehicleIds.has(parseInt(vehicleId))) {
-                    console.log(`Removendo marcador inativo do veículo ${vehicleId}`);
-                    markers[vehicleId].setMap(null);
-                    delete markers[vehicleId];
+            for (const existingId in markers) {
+                if (!activeVehicleIds.has(parseInt(existingId))) {
+                    markers[existingId].setMap(null);
+                    delete markers[existingId];
                 }
             }
+             updateIndicator.textContent = `Atualizado às ${new Date().toLocaleTimeString()}`;
 
         } catch (error) {
-            console.error("Erro ao buscar posições dos veículos:", error);
+            console.error("Erro ao buscar posições:", error);
+            updateIndicator.textContent = 'Erro ao atualizar!';
+             vehicleListElement.innerHTML = '';
+             vehicleListElement.appendChild(noVehiclesMsg);
+             noVehiclesMsg.textContent = 'Erro ao carregar dados.';
         }
     }
 </script>
 
-{# O SCRIPT QUE CARREGA A API DO GOOGLE MAPS. Ele deve ser o último. #}
 <script async
-    src="https://maps.googleapis.com/maps/api/js?key={{GOOGLE_MAPS_API_KEY}}&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=initMap">
 </script>
 {% endblock %}

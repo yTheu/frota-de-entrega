@@ -1,10 +1,11 @@
 import time
-from django.db import connections
-from .models import Rota, Coordenada, HistoricoEntrega
+from django.db import connections, transaction
+from .models import Rota, Coordenada, HistoricoEntrega, Entrega, Veiculo
 from django.utils import timezone
 import googlemaps
 import random
 from django.conf import settings
+from .planejarRota import calcular_distancia_haversine
 
 class frufru:
     CIANO = '\033[96m'
@@ -17,6 +18,37 @@ class frufru:
 
     CORES_ROTAS = [CIANO, VERDE, AMARELO, MAGENTA, AZUL]
 
+def simular_manutencao_veiculo(veiculo_id):
+    connections.close_all()
+    
+    try:
+        veiculo = Veiculo.objects.get(id=veiculo_id)
+        placa = veiculo.placa 
+        
+        tempo_real_minutos = random.randint(60, 300) 
+        tempo_simulado_segundos = tempo_real_minutos / 60
+        
+        print(f"{frufru.AMARELO}[MANUTENÇÃO {placa}]{frufru.FIM} Iniciada. Duração simulada: {tempo_simulado_segundos:.1f}s (Real: {tempo_real_minutos} min).")
+        
+        time.sleep(tempo_simulado_segundos)
+        
+        with transaction.atomic():
+            veiculo_atualizado = Veiculo.objects.select_for_update().get(id=veiculo_id)
+            
+            veiculo_atualizado.status = 'DISPONIVEL'
+            veiculo_atualizado.ultimaManutencao = timezone.now().date()
+            veiculo_atualizado.km_ultima_manutencao = veiculo_atualizado.km
+            veiculo_atualizado.save()
+            
+        print(f"{frufru.AMARELO}[MANUTENÇÃO {placa}]{frufru.FIM} {frufru.VERDE}CONCLUÍDA.{frufru.FIM} Veículo agora está DISPONÍVEL.")
+
+    except Veiculo.DoesNotExist:
+        print(f"{frufru.VERMELHO}[MANUTENÇÃO Thread] Erro: Veículo {veiculo_id} não encontrado.{frufru.FIM}")
+    except Exception as e:
+         print(f"{frufru.VERMELHO}[MANUTENÇÃO Thread {placa}] Erro inesperado: {e}{frufru.FIM}")
+    finally:
+        connections.close_all()
+
 def executar_rota_em_thread(rota_id):
     connections.close_all()
     gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY)
@@ -24,7 +56,7 @@ def executar_rota_em_thread(rota_id):
     cor_da_rota = random.choice(frufru.CORES_ROTAS)
     
     try:
-        rota = Rota.objects.select_related('veiculo', 'motorista').get(id=rota_id)
+        rota = Rota.objects.select_related('veiculo', 'motorista').prefetch_related('entregas__destino').get(id=rota_id)
         veiculo = rota.veiculo
     except Rota.DoesNotExist:
         print(f"{frufru.VERMELHO}[Thread] Erro: Rota {rota_id} não encontrada.{frufru.FIM}")
@@ -50,7 +82,10 @@ def executar_rota_em_thread(rota_id):
             entrega=entrega,
             descricao=f"Seu pedido saiu para entrega com o veículo de placa {veiculo.placa} e motorista {rota.motorista.nome}."
         )
-    
+
+    entregas_pendentes = list(rota.entregas.filter(status='EM_ROTA'))
+    print(f"{log_prefix} {len(entregas_pendentes)} entregas a serem realizadas nesta rota.")
+
     if rota.trajeto_polyline:
         pontos_do_trajeto = googlemaps.convert.decode_polyline(rota.trajeto_polyline)
         total_de_pontos = len(pontos_do_trajeto)
@@ -77,6 +112,33 @@ def executar_rota_em_thread(rota_id):
             nova_localizacao, _ = Coordenada.objects.get_or_create(latitude=ponto['lat'], longitude=ponto['lng'])
             veiculo.localizacao_atual = nova_localizacao
             veiculo.save()
+
+            # vai ver se a entrega chegou no destino (contornando a situação do veículo ter que voltar de onde começou)
+            entregas_concluidas_neste_ponto = []
+            for entrega in entregas_pendentes:
+                if entrega.destino:
+                    distancia_ao_destino = calcular_distancia_haversine(nova_localizacao, entrega.destino)
+                    
+                    # vê se tá perto do local exato de entrega
+                    if distancia_ao_destino < 0.2: 
+                        print(f"{log_prefix} {frufru.VERDE}Chegou ao destino da Entrega #{entrega.id}!{frufru.FIM}")
+                        
+                        with transaction.atomic():
+                            # Rebusca a entrega para evitar race conditions
+                            entrega_atualizada = Entrega.objects.select_for_update().get(id=entrega.id)
+                            if entrega_atualizada.status == 'EM_ROTA':
+                                entrega_atualizada.status = 'ENTREGUE'
+                                entrega_atualizada.data_entrega_real = timezone.now()
+                                entrega_atualizada.save()
+                                
+                                HistoricoEntrega.objects.create(
+                                    entrega=entrega_atualizada, 
+                                    descricao="Seu pedido foi entregue com sucesso!"
+                                )
+                                entregas_concluidas_neste_ponto.append(entrega) # dps de entregue, remove da lista da Rota
+
+            for concluida in entregas_concluidas_neste_ponto:
+                entregas_pendentes.remove(concluida)
             
             #mostrar o percentual percorrido
             if i in pontos_para_logar:

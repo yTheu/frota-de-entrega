@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from .forms import AbastecimentoForm, EntregaForm, LoginForm, ManutencaoForm, MotoristaForm, VeiculoForm, ClienteRegistrationForm
 from .models import Abastecimento, Coordenada, Entrega, HistoricoEntrega, Manutencao, PerfilCliente, PerfilMotorista, Rota, Veiculo
-from .threads import executar_rota_em_thread
+from .threads import executar_rota_em_thread, simular_manutencao_veiculo
 
 gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY) #inicializa a comunicação com a API
 
@@ -80,8 +80,14 @@ def registrar_cliente(request):
             PerfilCliente.objects.create(
                 user=user,
                 nome_empresa=form.cleaned_data.get('nome_empresa'),
-                endereco=form.cleaned_data.get('endereco'),
-                telefone=form.cleaned_data.get('telefone')
+                telefone=form.cleaned_data.get('telefone'),
+                
+                cep=form.cleaned_data.get('cep'),
+                rua=form.cleaned_data.get('rua'),
+                numero=form.cleaned_data.get('numero'),
+                bairro=form.cleaned_data.get('bairro'),
+                cidade=form.cleaned_data.get('cidade'),
+                estado=form.cleaned_data.get('estado')
             )
             
             messages.success(request, 'Cadastro realizado com sucesso! Por favor, faça login para continuar.')
@@ -216,12 +222,15 @@ def detalhes_veiculo(request, veiculo_id):
     historico_manutencao = Manutencao.objects.filter(veiculo=veiculo).order_by('-data')[:10]
     historico_abastecimento = Abastecimento.objects.filter(veiculo=veiculo).order_by('-dataAbastecimento')[:10]
     
+    manutencoes_solicitadas = Manutencao.objects.filter(veiculo=veiculo, status='SOLICITADA').order_by('-data')
+
     contexto = {
         'veiculo': veiculo,
         'rota_ativa': rota_ativa,
         'rotas_concluidas': rotas_concluidas,
         'historico_manutencao': historico_manutencao,
         'historico_abastecimento': historico_abastecimento,
+        'manutencoes_solicitadas': manutencoes_solicitadas
     }
     
     return render(request, 'ADMIN/veiculos/detalhesVeiculo.html', contexto)
@@ -409,9 +418,90 @@ def comecar_planejamento_rotas(request):
 
 @login_required
 @user_passes_test(is_admin)
+def iniciar_manutencao_veiculo(request, veiculo_id):
+    if request.method == 'POST':
+        veiculo = get_object_or_404(Veiculo, pk=veiculo_id)
+        
+        if veiculo.status == 'DISPONIVEL':
+            veiculo.status = 'EM_MANUTENCAO'
+            veiculo.save()
+            
+            thread = threading.Thread(target=simular_manutencao_veiculo, args=(veiculo.id,))
+            thread.start()
+            
+            messages.success(request, f"O veículo {veiculo.placa} foi enviado para manutenção simulada.")
+        else:
+            messages.warning(request, f"O veículo {veiculo.placa} não está disponível para iniciar a manutenção (Status: {veiculo.get_status_display()}).")
+            
+    return redirect('detalhes_veiculo', veiculo_id=veiculo_id)
+
+@login_required
+@user_passes_test(is_admin)
 def lista_manutencoes(request):
-    manutencoes = Manutencao.objects.all()
-    return render(request, 'ADMIN/manutencoes/listaManutencoes.html', {'manutencoes': manutencoes})
+    manutencoes_lista = Manutencao.objects.select_related('veiculo', 'motorista').order_by('-data')
+
+    filtrar_status = request.GET.get('status', '')
+    filtrar_veiculo = request.GET.get('veiculo', '')
+
+    if filtrar_status:
+        manutencoes_lista = manutencoes_lista.filter(status=filtrar_status)
+
+    if filtrar_veiculo:
+        manutencoes_lista = manutencoes_lista.filter(veiculo_id=filtrar_veiculo)
+
+    paginator = Paginator(manutencoes_lista, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    veiculos_para_filtro = Veiculo.objects.all().order_by('placa')
+
+    contexto = {
+        'manutencoes': page_obj,
+        'status_choices': Manutencao.STATUS_MANUTENCAO,
+        'veiculos_choices': veiculos_para_filtro,
+        'current_status': filtrar_status,
+        'current_veiculo': filtrar_veiculo,
+    }
+
+    return render(request, 'ADMIN/manutencoes/listaManutencoes.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def detalhes_manutencao(request, manutencao_id):
+    manutencao = get_object_or_404(
+        Manutencao.objects.select_related('veiculo', 'motorista'), 
+        pk=manutencao_id
+    )
+    contexto = {'manutencao': manutencao}
+    return render(request, 'ADMIN/manutencoes/detalhesManutencao.html', contexto)
+
+@login_required
+@user_passes_test(is_admin)
+def editar_manutencao(request, manutencao_id):
+    manutencao = get_object_or_404(Manutencao, pk=manutencao_id)
+    
+    if request.method == 'POST':
+        form = ManutencaoForm(request.POST, instance=manutencao)
+        if form.is_valid():
+            manutencao_salva = form.save()
+            
+            if manutencao_salva.status == 'CONCLUIDA' and manutencao_salva.veiculo.status == 'EM_MANUTENCAO':
+                 manutencao_salva.veiculo.status = 'DISPONIVEL'
+                 manutencao_salva.veiculo.save()
+                 messages.info(request, f"Status do veículo {manutencao_salva.veiculo.placa} atualizado para DISPONÍVEL.")
+
+            elif manutencao_salva.status == 'PENDENTE' and manutencao_salva.veiculo.status == 'DISPONIVEL':
+                 manutencao_salva.veiculo.status = 'EM_MANUTENCAO'
+                 manutencao_salva.veiculo.save()
+                 messages.info(request, f"Status do veículo {manutencao_salva.veiculo.placa} atualizado para EM MANUTENÇÃO.")
+
+            messages.success(request, f"Manutenção #{manutencao.id} atualizada com sucesso!")
+            return redirect('detalhes_manutencao', manutencao_id=manutencao.id)
+    else:
+        form = ManutencaoForm(instance=manutencao)
+
+    contexto = {'form': form, 'manutencao': manutencao}
+    return render(request, 'ADMIN/manutencoes/editarManutencao.html', contexto)
 
 @login_required
 @user_passes_test(is_admin)
@@ -587,6 +677,47 @@ def iniciar_rota(request, rota_id):
     # Redireciona de volta para o dashboard, onde ele verá a rota como 'ativa'
     return redirect('dashboard_motorista')
 
+@login_required
+@user_passes_test(is_motorista)
+def encerrar_rota_manual(request, rota_id):
+    if request.method == 'POST':
+        rota = get_object_or_404(Rota, pk=rota_id, motorista=request.user.perfilmotorista, status='EM_ROTA')
+        
+        try:
+            with transaction.atomic():
+                print(f"[MANUAL] Encerrando Rota #{rota.id} a pedido do motorista.")
+                
+                rota.status = 'CONCLUIDA'
+                rota.data_fim_real = timezone.now()
+                rota.save()
+                
+                rota.veiculo.status = 'DISPONIVEL'
+                rota.veiculo.save()
+                
+                rota.motorista.disponivel = True
+                rota.motorista.save()
+                
+                entregas_pendentes = rota.entregas.exclude(status='ENTREGUE')
+                if entregas_pendentes.exists():
+                    print(f"[MANUAL] Marcando {entregas_pendentes.count()} entregas restantes como 'ENTREGUE'.")
+                    agora = timezone.now()
+                    for entrega in entregas_pendentes:
+                        entrega.status = 'ENTREGUE'
+                        entrega.data_entrega_real = agora 
+                        entrega.save()
+                        HistoricoEntrega.objects.create(
+                            entrega=entrega, 
+                            descricao="Entrega concluída (encerramento manual da rota)."
+                        )
+
+                messages.success(request, f"Rota #{rota.id} encerrada manualmente com sucesso!")
+        
+        except Exception as e:
+            messages.error(request, f"Erro ao tentar encerrar a rota manualmente: {e}")
+            print(f"[MANUAL] Erro ao encerrar Rota #{rota.id}: {e}")
+
+    return redirect('dashboard_motorista')
+
 # ------------------Views do Cliente-------------------------------------------------------------------------
 
 def is_cliente(user):
@@ -618,36 +749,61 @@ def dashboard_cliente(request):
 @login_required
 @user_passes_test(is_cliente)
 def cadastrar_pedido(request):
+    perfil_cliente = request.user.perfilcliente
     if request.method == 'POST':
-        form = EntregaForm(request.POST)
+        form = EntregaForm(request.POST, perfil_cliente=perfil_cliente)
+
         if form.is_valid():
             try:
-                #pega os endereços
                 dados = form.cleaned_data
-                endereco_origem_txt = f"{dados['rua_origem']}, {dados['numero_origem']} - {dados['bairro_origem']}, {dados['cidade_origem']} - {dados['estado_origem']}, {dados['cep_origem']}"
-                endereco_destino_txt = f"{dados['rua_destino']}, {dados['numero_destino']} - {dados['bairro_destino']}, {dados['cidade_destino']} - {dados['estado_destino']}, {dados['cep_destino']}"
-
-                #passa os endereços para a API
-                geocode_origem = gmaps.geocode(endereco_origem_txt)
-                geocode_destino = gmaps.geocode(endereco_destino_txt)
-
-                #vê se a API encontrou os locais
-                if not geocode_origem or not geocode_destino:
-                    messages.error(request, "Não foi possível encontrar um ou ambos os endereços. Por favor, verifique e tente novamente.")
-                    return render(request, 'CLIENTE/cadastrarEntrega.html', {'form': form})
-
-                #pega as coordenadas
-                origem_coords = geocode_origem[0]['geometry']['location']
-                coordenada_origem, _ = Coordenada.objects.update_or_create(latitude=origem_coords['lat'], longitude=origem_coords['lng'], defaults={
+                coordenada_origem = None
+                
+                if dados['usar_endereco_cadastrado'] and perfil_cliente.endereco:
+                    endereco_origem_txt = perfil_cliente.endereco
+                    dados_origem_para_coordenada = {} 
+                else:
+                    endereco_origem_txt = f"{dados['rua_origem']}, {dados['numero_origem']} - {dados['bairro_origem']}, {dados['cidade_origem']} - {dados['estado_origem']}, {dados['cep_origem']}"
+                    dados_origem_para_coordenada = {
                         'rua': dados['rua_origem'], 'numero': dados['numero_origem'],
                         'bairro': dados['bairro_origem'], 'cidade': dados['cidade_origem'],
-                        'estado': dados['estado_origem'], 'cep': dados['cep_origem'],
+                        'estado': dados['estado_origem'], 'cep': dados['cep_origem']
+                    }
+
+                geocode_origem = gmaps.geocode(endereco_origem_txt)
+                if not geocode_origem:
+                    messages.error(request, f"Não foi possível encontrar o endereço de origem: '{endereco_origem_txt}'. Verifique.")
+                    return render(request, 'CLIENTE/cadastrar_pedido.html', {'form': form})
+                
+                origem_coords = geocode_origem[0]['geometry']['location']
+                coordenada_origem, _ = Coordenada.objects.update_or_create(
+                    latitude=origem_coords['lat'], longitude=origem_coords['lng'],
+                    defaults={
+                        **dados_origem_para_coordenada,
                         'endereco_completo': geocode_origem[0]['formatted_address']
                     }
                 )
 
+                endereco_destino_txt = f"{dados['rua_destino']}, {dados['numero_destino']} - {dados['bairro_destino']}, {dados['cidade_destino']} - {dados['estado_destino']}, {dados['cep_destino']}"
+                geocode_destino = gmaps.geocode(endereco_destino_txt)
+
+                # api caça o lugar com base no cep
+                if not geocode_destino:
+                    messages.error(request, "Não foi possível encontrar o endereço de destino. Verifique.")
+                    return render(request, 'CLIENTE/cadastrar_pedido.html', {'form': form})
+                
+                # vai ver se o endereço colocado é real
+                resultado_destino = geocode_destino[0]
+                tipos_validos_para_entrega = ['street_address', 'premise', 'subpremise', 'route'] 
+                
+                if not any(t in resultado_destino.get('types', []) for t in tipos_validos_para_entrega):
+                    messages.error(request, "O endereço de destino parece muito vago ou incompleto. Por favor, inclua detalhes como rua e número.")
+                    messages.info(request, f"Encontramos: {resultado_destino.get('formatted_address', 'N/A')}") 
+                    return render(request, 'CLIENTE/cadastrar_pedido.html', {'form': form})
+
                 destino_coords = geocode_destino[0]['geometry']['location']
-                coordenada_destino, _ = Coordenada.objects.update_or_create(latitude=destino_coords['lat'], longitude=destino_coords['lng'], defaults={
+                coordenada_destino, _ = Coordenada.objects.update_or_create(
+                    latitude=destino_coords['lat'], longitude=destino_coords['lng'],
+                    defaults={
                         'rua': dados['rua_destino'], 'numero': dados['numero_destino'],
                         'bairro': dados['bairro_destino'], 'cidade': dados['cidade_destino'],
                         'estado': dados['estado_destino'], 'cep': dados['cep_destino'],
@@ -656,25 +812,22 @@ def cadastrar_pedido(request):
                 )
 
                 entrega = form.save(commit=False)
-                entrega.cliente = request.user.perfilcliente
+                entrega.cliente = perfil_cliente
                 entrega.origem = coordenada_origem
                 entrega.destino = coordenada_destino
-                entrega.status = 'EM_SEPARACAO'
-                entrega.data_entrega_prevista = timezone.now() + timezone.timedelta(days=2)
+                entrega.status = 'EM_SEPARACAO' 
+                entrega.data_entrega_prevista = timezone.now() + timezone.timedelta(days=2) 
                 entrega.save()
-
-                HistoricoEntrega.objects.create(
-                    entrega=entrega,
-                    descricao="Pedido realizado e aguardando planejamento de rota."
-                )
-
+                
+                HistoricoEntrega.objects.create(entrega=entrega, descricao="Pedido realizado e aguardando planejamento de rota.")
+                
                 messages.success(request, f"Pedido de entrega #{entrega.id} cadastrado com sucesso! Já estamos planejando sua rota.")
                 return redirect('dashboard_cliente')
-            
+                
             except Exception as e:
                 messages.error(request, f"Ocorreu um erro inesperado: {e}")
     else:
-        form = EntregaForm()
+        form = EntregaForm(perfil_cliente=perfil_cliente)
 
     return render(request, 'CLIENTE/cadastrarEntrega.html', {'form': form})
 
@@ -682,8 +835,22 @@ def cadastrar_pedido(request):
 @user_passes_test(is_cliente)
 def meus_pedidos(request):
     cliente_perfil = request.user.perfilcliente
-    pedidos = Entrega.objects.filter(cliente=cliente_perfil)
-    return render(request, 'CLIENTE/meusPedidos.html', {'pedidos': pedidos})
+    pedidos_lista = Entrega.objects.filter(cliente=cliente_perfil).order_by('-data_pedido')
+
+    filtrar_status = request.GET.get('status', '')
+    if filtrar_status:
+        pedidos_lista = pedidos_lista.filter(status=filtrar_status)
+
+    paginator = Paginator(pedidos_lista, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    contexto = {
+        'pedidos': page_obj,
+        'status_choices': Entrega.STATUS_ENTREGA,
+        'current_status': filtrar_status,
+    }
+    return render(request, 'CLIENTE/meusPedidos.html', {'pedidos': pedidos_lista})
 
 @login_required
 @user_passes_test(is_cliente)

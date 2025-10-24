@@ -6,7 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 class RotaManager(models.Manager):
-    def criar_rota(self, ids_entregas, dados_api):
+    def criar_rota(self, ids_entregas, dados_api, peso_necessario):
         if not ids_entregas:
             return (False, "Nenhuma entrega selecionada.")
         try:
@@ -17,11 +17,14 @@ class RotaManager(models.Manager):
 
                 #pega os motoristas e veículos livres (q n entraram no agrupamento acima) e escolhe o primeiro pra atribuir à entrega
                 motorista_disponivel = PerfilMotorista.objects.select_for_update().filter(disponivel=True).exclude(id__in=motoristas_ocupados_ids).first()
-                veiculo_disponivel = Veiculo.objects.select_for_update().filter(status='DISPONIVEL').exclude(id__in=veiculos_ocupados_ids).first()
+                veiculo_disponivel = Veiculo.objects.select_for_update().filter(status='DISPONIVEL', capacidade_kg__gte=peso_necessario).exclude(id__in=veiculos_ocupados_ids).order_by('capacidade_kg').first()
 
                 # mas e se não tiver nenhum disponível? chora ;)
                 if not veiculo_disponivel or not motorista_disponivel:
-                    return (False, "Nenhum veículo ou motorista disponível no momento.")
+                    if not veiculo_disponivel:
+                        return (False, f"Nenhum veículo disponível com capacidade para {peso_necessario:.2f} kg.")
+                    else:
+                        return (False, "Nenhum motorista disponível no momento.")
                 
                 inicio_previsto = timezone.now() + timezone.timedelta(minutes=15)
                 fim_previsto = inicio_previsto + timezone.timedelta(minutes=dados_api['duracao_minutos'])
@@ -57,9 +60,28 @@ class PerfilCliente(models.Model):
     endereco = models.CharField(max_length=255, blank=True, null=True)
     telefone = models.CharField(max_length=20, blank=True, null=True)
 
+    cep = models.CharField(max_length=10, blank=True, null=True)
+    rua = models.CharField(max_length=255, blank=True, null=True)
+    numero = models.CharField(max_length=20, blank=True, null=True)
+    bairro = models.CharField(max_length=100, blank=True, null=True)
+    cidade = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(max_length=50, blank=True, null=True)
+
+    endereco = models.CharField(max_length=255, blank=True, null=True)
+    
+    def get_endereco_formatado(self):
+        partes = [self.rua, self.numero, self.bairro, self.cidade, self.estado, self.cep]
+        return ", ".join(filter(None, partes))
+
+    def save(self, *args, **kwargs):
+        self.endereco = self.get_endereco_formatado()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f'Perfil de Cliente para {self.user.username}'
-
+    
+KM_LIMITE_MANUTENCAO = 10000
+DIAS_LIMITE_MANUTENCAO = 180
 class Veiculo(models.Model):
     status_veiculo = [
         ('DISPONIVEL', 'Disponível'),
@@ -71,17 +93,29 @@ class Veiculo(models.Model):
     modelo = models.CharField(max_length=100)
     km = models.PositiveIntegerField()
     autonomia = models.DecimalField(max_digits=5, decimal_places=2)
+    capacidade_kg = models.DecimalField(max_digits=10, decimal_places=2)
     ultimaManutencao = models.DateField()
+    km_ultima_manutencao = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=15, choices=status_veiculo, default='DISPONIVEL')
     localizacao_atual = models.ForeignKey('Coordenada', on_delete=models.SET_NULL, null=True, blank=True)
     
     #preventiva
     def precisa_manutencao(self):
-        if not self.ultimaManutencao:
-            return True
+        # condição por tempo
+        precisa_por_tempo = False
+        if self.ultimaManutencao:
+            dias_desde_manutencao = (timezone.now().date() - self.ultimaManutencao).days
+            if dias_desde_manutencao > DIAS_LIMITE_MANUTENCAO:
+                precisa_por_tempo = True
+        else:
+            precisa_por_tempo = True # Nunca fez, então precisa
+
+        # condição por km
+        km_rodados_desde_manutencao = self.km - self.km_ultima_manutencao
+        precisa_por_km = km_rodados_desde_manutencao >= KM_LIMITE_MANUTENCAO
         
-        dias_desde_manutencao = (timezone.now().date() - self.ultimaManutencao).days
-        return dias_desde_manutencao > 180 #a cada 6 meses
+        # se qualquer uma for True, manda pra manunteção
+        return precisa_por_tempo or precisa_por_km
 
     def __str__(self):
         return f"{self.modelo} ({self.placa})"
@@ -136,7 +170,7 @@ class Manutencao(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPO_MANUTENCAO)
     descricao = models.TextField()
     data = models.DateField()
-    custo = models.DecimalField(max_digits=10, decimal_places=2)
+    custo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     STATUS_MANUTENCAO = [
         ("SOLICITADA", "Solicitada"),
         ("PENDENTE", "Pendente"),
@@ -188,7 +222,6 @@ class Entrega(models.Model):
 
     descricao_carga = models.CharField(max_length=255, help_text="Ex: 2 caixas de eletrônicos")
     peso_kg = models.DecimalField(max_digits=10, decimal_places=2, help_text="Peso total da carga em Kg")
-    volume_m3 = models.DecimalField(max_digits=10, decimal_places=2, help_text="Volume total da carga em metros cúbicos (m³)")
     fragil = models.BooleanField(default=False, verbose_name="Carga Frágil?")
     
     nome_destinatario = models.CharField(max_length=100)

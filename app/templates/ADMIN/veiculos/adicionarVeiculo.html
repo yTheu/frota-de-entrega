@@ -1,13 +1,70 @@
-{% extends 'base.html' %}
+{% extends 'admin_base.html' %}
 
-{% block title %}Adicionar Veículo{% endblock %}
+{% block title %}Adicionar Novo Veículo{% endblock %}
 
 {% block content %}
-<h2>Adicionar Veículo</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Salvar</button>
-    <a class="btn btn-secondary" href="{% url 'lista_veiculos' %}">Cancelar</a>
-</form>
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3><i class="fas fa-truck-plus me-2"></i>Adicionar Novo Veículo</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <h5 class="mb-3">Dados Principais</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.modelo.label_tag }} {{ form.modelo }}
+                        {% if form.modelo.errors %}<div class="text-danger small mt-1">{{ form.modelo.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.placa.label_tag }} {{ form.placa }}
+                        {% if form.placa.errors %}<div class="text-danger small mt-1">{{ form.placa.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.km.label_tag }} {{ form.km }}
+                        {% if form.km.errors %}<div class="text-danger small mt-1">{{ form.km.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.capacidade_kg.label_tag }} {{ form.capacidade_kg }}
+                        {% if form.capacidade_kg.errors %}<div class="text-danger small mt-1">{{ form.capacidade_kg.errors|striptags }}</div>{% endif %}
+                    </div>
+                     <div class="col-md-4 mb-3">
+                        {{ form.status.label_tag }} {{ form.status }}
+                        {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h5 class="mb-3">Dados de Manutenção Inicial <small class="text-muted">(Opcional)</small></h5>
+
+                 <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.ultimaManutencao.label_tag }} {{ form.ultimaManutencao }}
+                        {% if form.ultimaManutencao.errors %}<div class="text-danger small mt-1">{{ form.ultimaManutencao.errors|striptags }}</div>{% endif %}
+                    </div>
+                     <div class="col-md-6 mb-3">
+                        {{ form.km_ultima_manutencao.label_tag }} {{ form.km_ultima_manutencao }}
+                        {% if form.km_ultima_manutencao.errors %}<div class="text-danger small mt-1">{{ form.km_ultima_manutencao.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'lista_veiculos' %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Salvar Novo Veículo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 {% endblock %}

@@ -3,14 +3,14 @@
 
 {% block title %}Solicitar Nova Entrega{% endblock %}
 
-{% block cliente_content %}
+{% block content %}
 <div class="container my-4">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
             <h3><i class="fas fa-plus-circle me-2"></i>Solicitar Nova Entrega</h3>
         </div>
         <div class="card-body">
-            <p class="card-text text-muted">Preencha os detalhes abaixo para agendar sua entrega.</p>
+            <p class="card-text text-muted">Preencha os detalhes abaixo. O sistema calculará a previsão de entrega para você.</p>
 
             <form method="post" novalidate>
                 {% csrf_token %}
@@ -19,34 +19,45 @@
                     <div class="alert alert-danger">{{ form.non_field_errors }}</div>
                 {% endif %}
                 
+                {% if user.perfilcliente.endereco %}
+                <div class="form-check mb-4 p-3 bg-light border rounded">
+                    {{ form.usar_endereco_cadastrado }}
+                    <label class="form-check-label" for="{{ form.usar_endereco_cadastrado.id_for_label }}">
+                        {{ form.usar_endereco_cadastrado.label }}
+                        <small class="text-muted d-block">({{ user.perfilcliente.endereco }})</small>
+                    </label>
+                    {% if form.usar_endereco_cadastrado.errors %}<div class="text-danger small mt-1">{{ form.usar_endereco_cadastrado.errors|striptags }}</div>{% endif %}
+                </div>
+                {% endif %}
+
                 <div class="row">
-                    <div class="col-md-6">
-                        <fieldset class="border p-3 mb-4">
+                    <div class="col-md-6" id="fieldset-origem">
+                        <fieldset class="border p-3 mb-4 h-100">
                             <legend class="float-none w-auto px-2 h6">Endereço de Origem</legend>
                             <div class="mb-2">{{ form.cep_origem.label_tag }} {{ form.cep_origem }} {% if form.cep_origem.errors %}<div class="text-danger small mt-1">{{ form.cep_origem.errors|striptags }}</div>{% endif %}</div>
                             <div class="mb-2">{{ form.rua_origem.label_tag }} {{ form.rua_origem }} {% if form.rua_origem.errors %}<div class="text-danger small mt-1">{{ form.rua_origem.errors|striptags }}</div>{% endif %}</div>
                             <div class="row">
-                                <div class="col-sm-8 mb-2">{{ form.bairro_origem.label_tag }} {{ form.bairro_origem }}</div>
-                                <div class="col-sm-4 mb-2">{{ form.numero_origem.label_tag }} {{ form.numero_origem }}</div>
+                                <div class="col-sm-8 mb-2">{{ form.bairro_origem.label_tag }} {{ form.bairro_origem }} {% if form.bairro_origem.errors %}<div class="text-danger small mt-1">{{ form.bairro_origem.errors|striptags }}</div>{% endif %}</div>
+                                <div class="col-sm-4 mb-2">{{ form.numero_origem.label_tag }} {{ form.numero_origem }} {% if form.numero_origem.errors %}<div class="text-danger small mt-1">{{ form.numero_origem.errors|striptags }}</div>{% endif %}</div>
                             </div>
                             <div class="row">
-                                <div class="col-sm-8 mb-2">{{ form.cidade_origem.label_tag }} {{ form.cidade_origem }}</div>
-                                <div class="col-sm-4 mb-2">{{ form.estado_origem.label_tag }} {{ form.estado_origem }}</div>
+                                <div class="col-sm-8 mb-2">{{ form.cidade_origem.label_tag }} {{ form.cidade_origem }} {% if form.cidade_origem.errors %}<div class="text-danger small mt-1">{{ form.cidade_origem.errors|striptags }}</div>{% endif %}</div>
+                                <div class="col-sm-4 mb-2">{{ form.estado_origem.label_tag }} {{ form.estado_origem }} {% if form.estado_origem.errors %}<div class="text-danger small mt-1">{{ form.estado_origem.errors|striptags }}</div>{% endif %}</div>
                             </div>
                         </fieldset>
                     </div>
                     <div class="col-md-6">
-                        <fieldset class="border p-3 mb-4">
+                        <fieldset class="border p-3 mb-4 h-100">
                             <legend class="float-none w-auto px-2 h6">Endereço de Destino</legend>
                             <div class="mb-2">{{ form.cep_destino.label_tag }} {{ form.cep_destino }} {% if form.cep_destino.errors %}<div class="text-danger small mt-1">{{ form.cep_destino.errors|striptags }}</div>{% endif %}</div>
                             <div class="mb-2">{{ form.rua_destino.label_tag }} {{ form.rua_destino }} {% if form.rua_destino.errors %}<div class="text-danger small mt-1">{{ form.rua_destino.errors|striptags }}</div>{% endif %}</div>
                             <div class="row">
-                                <div class="col-sm-8 mb-2">{{ form.bairro_destino.label_tag }} {{ form.bairro_destino }}</div>
-                                <div class="col-sm-4 mb-2">{{ form.numero_destino.label_tag }} {{ form.numero_destino }}</div>
+                                <div class="col-sm-8 mb-2">{{ form.bairro_destino.label_tag }} {{ form.bairro_destino }} {% if form.bairro_destino.errors %}<div class="text-danger small mt-1">{{ form.bairro_destino.errors|striptags }}</div>{% endif %}</div>
+                                <div class="col-sm-4 mb-2">{{ form.numero_destino.label_tag }} {{ form.numero_destino }} {% if form.numero_destino.errors %}<div class="text-danger small mt-1">{{ form.numero_destino.errors|striptags }}</div>{% endif %}</div>
                             </div>
                             <div class="row">
-                                <div class="col-sm-8 mb-2">{{ form.cidade_destino.label_tag }} {{ form.cidade_destino }}</div>
-                                <div class="col-sm-4 mb-2">{{ form.estado_destino.label_tag }} {{ form.estado_destino }}</div>
+                                <div class="col-sm-8 mb-2">{{ form.cidade_destino.label_tag }} {{ form.cidade_destino }} {% if form.cidade_destino.errors %}<div class="text-danger small mt-1">{{ form.cidade_destino.errors|striptags }}</div>{% endif %}</div>
+                                <div class="col-sm-4 mb-2">{{ form.estado_destino.label_tag }} {{ form.estado_destino }} {% if form.estado_destino.errors %}<div class="text-danger small mt-1">{{ form.estado_destino.errors|striptags }}</div>{% endif %}</div>
                             </div>
                         </fieldset>
                     </div>
@@ -55,18 +66,17 @@
                 <fieldset class="border p-3 mb-4">
                     <legend class="float-none w-auto px-2 h6">Dados da Carga e Destinatário</legend>
                      <div class="row">
-                        <div class="col-md-6 mb-3">{{ form.nome_destinatario.label_tag }} {{ form.nome_destinatario }}</div>
-                        <div class="col-md-6 mb-3">{{ form.telefone_destinatario.label_tag }} {{ form.telefone_destinatario }}</div>
-                        <div class="col-md-12 mb-3">{{ form.descricao_carga.label_tag }} {{ form.descricao_carga }}</div>
-                        <div class="col-md-4 mb-3">{{ form.peso_kg.label_tag }} {{ form.peso_kg }}</div>
-                        <div class="col-md-4 mb-3">{{ form.volume_m3.label_tag }} {{ form.volume_m3 }}</div>
+                        <div class="col-md-6 mb-3">{{ form.nome_destinatario.label_tag }} {{ form.nome_destinatario }} {% if form.nome_destinatario.errors %}<div class="text-danger small mt-1">{{ form.nome_destinatario.errors|striptags }}</div>{% endif %}</div>
+                        <div class="col-md-6 mb-3">{{ form.telefone_destinatario.label_tag }} {{ form.telefone_destinatario }} {% if form.telefone_destinatario.errors %}<div class="text-danger small mt-1">{{ form.telefone_destinatario.errors|striptags }}</div>{% endif %}</div>
+                        <div class="col-md-12 mb-3">{{ form.descricao_carga.label_tag }} {{ form.descricao_carga }} {% if form.descricao_carga.errors %}<div class="text-danger small mt-1">{{ form.descricao_carga.errors|striptags }}</div>{% endif %}</div>
+                        <div class="col-md-4 mb-3">{{ form.peso_kg.label_tag }} {{ form.peso_kg }} {% if form.peso_kg.errors %}<div class="text-danger small mt-1">{{ form.peso_kg.errors|striptags }}</div>{% endif %}</div>        
                         <div class="col-md-4 d-flex align-items-center"><div class="form-check mt-3">{{ form.fragil }} {{ form.fragil.label_tag }}</div></div>
                     </div>
                 </fieldset>
 
                 <fieldset class="border p-3 mb-4">
                      <legend class="float-none w-auto px-2 h6">Observações Adicionais</legend>
-                    <div class="mb-3">{{ form.observacoes_entrega.label_tag }} {{ form.observacoes_entrega }}</div>
+                    <div class="mb-3">{{ form.observacoes_entrega.label_tag }} {{ form.observacoes_entrega }} {% if form.observacoes_entrega.errors %}<div class="text-danger small mt-1">{{ form.observacoes_entrega.errors|striptags }}</div>{% endif %}</div>
                 </fieldset>
                 
                 <div class="d-flex justify-content-end">
@@ -79,4 +89,69 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const clearAddressForm = (prefix) => {
+        document.getElementById(`id_rua_${prefix}`).value = "";
+        document.getElementById(`id_bairro_${prefix}`).value = "";
+        document.getElementById(`id_cidade_${prefix}`).value = "";
+        document.getElementById(`id_estado_${prefix}`).value = "";
+    };
+
+    // pega o CEP via api do viacep
+    const searchCep = async (cep, prefix) => {
+        const cepValue = cep.replace(/\D/g, ''); 
+
+        clearAddressForm(prefix); 
+
+        if (cepValue.length === 8) { 
+            const url = `https://viacep.com.br/ws/${cepValue}/json/`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.erro) {
+                    document.getElementById(`id_rua_${prefix}`).value = data.logradouro || "";
+                    document.getElementById(`id_bairro_${prefix}`).value = data.bairro || "";
+                    document.getElementById(`id_cidade_${prefix}`).value = data.localidade || "";
+                    document.getElementById(`id_estado_${prefix}`).value = data.uf || "";
+
+                    document.getElementById(`id_numero_${prefix}`).focus(); 
+
+                } else {
+                    console.warn("CEP não encontrado pela API ViaCEP.");
+                }
+            } catch (error) {
+                console.error("Erro ao buscar CEP:", error);
+            }
+        } else if (cepValue.length > 0) {
+             console.warn("Formato de CEP inválido.");
+        }
+    };
+    document.getElementById('id_cep_origem').addEventListener('blur', (event) => searchCep(event.target.value, 'origem'));
+    document.getElementById('id_cep_destino').addEventListener('blur', (event) => searchCep(event.target.value, 'destino'));
+</script>
+
+<script>
+    const checkboxOrigem = document.getElementById('{{ form.usar_endereco_cadastrado.id_for_label }}');
+    const fieldsetOrigem = document.getElementById('fieldset-origem');
+
+    const toggleOrigem = () => {
+        if (checkboxOrigem && checkboxOrigem.checked) {
+            fieldsetOrigem.style.display = 'none';
+        } else {
+            fieldsetOrigem.style.display = 'block';
+        }
+    };
+
+    if (checkboxOrigem) {
+        checkboxOrigem.addEventListener('change', toggleOrigem);
+        toggleOrigem(); 
+    } else {
+        fieldsetOrigem.style.display = 'block';
+    }
+</script>
 {% endblock %}

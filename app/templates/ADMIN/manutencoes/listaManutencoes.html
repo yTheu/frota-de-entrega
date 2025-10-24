@@ -1,36 +1,103 @@
-{% extends 'base.html' %}
+{% extends 'admin_base.html' %}
 
-{% block title %}Lista de Manutenções{% endblock %}
+{% block title %}Gerenciamento de Manutenções{% endblock %}
 
 {% block content %}
-<h2>Lista de Manutenções</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Gerenciamento de Manutenções</h1>
+            <p class="text-muted">Visualize e filtre o histórico de manutenções da frota.</p>
+        </div>
+        <div>
+            {# <a class="btn btn-primary" href="#">Registrar Manutenção</a> #}
+        </div>
+    </div>
 
-{% if manutencoes %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Veículo</th>
-                <th>Tipo</th>
-                <th>Data</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for m in manutencoes %}
-            <tr>
-                <td>{{ m.id }}</td>
-                <td>{{ m.veiculo }}</td>
-                <td>{{ m.get_tipo_display }}</td>
-                <td>{{ m.data }}</td>
-                <td>{{ m.get_status_display }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Nenhuma manutenção encontrada.</p>
-{% endif %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <select name="veiculo" class="form-select">
+                        <option value="">Filtrar por Veículo</option>
+                        {% for v in veiculos_choices %}
+                            <option value="{{ v.id }}" {% if current_veiculo == v.id|stringformat:"s" %}selected{% endif %}>{{ v.placa }} - {{ v.modelo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">Filtrar por Status</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex">
+                    <button type="submit" class="btn btn-info flex-grow-1 me-2">Filtrar</button>
+                    <a href="{% url 'lista_manutencoes' %}" class="btn btn-secondary">Limpar</a>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<a class="btn btn-primary" href="{% url 'dashboard_admin' %}">Voltar ao Dashboard</a>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#ID</th>
+                            <th>Veículo</th>
+                            <th>Tipo</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Solicitante</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for manutencao in manutencoes %}
+                            <tr>
+                                <td><strong>#{{ manutencao.id }}</strong></td>
+                                <td><a href="{% url 'detalhes_veiculo' manutencao.veiculo.id %}">{{ manutencao.veiculo.placa }}</a></td>
+                                <td>{{ manutencao.get_tipo_display }}</td>
+                                <td>{{ manutencao.data|date:"d/m/Y" }}</td>
+                                <td>
+                                    {# Color badges for status #}
+                                    {% if manutencao.status == 'CONCLUIDA' %}<span class="badge bg-success text-white">{{ manutencao.get_status_display }}</span>
+                                    {% elif manutencao.status == 'PENDENTE' %}<span class="badge bg-warning text-dark">{{ manutencao.get_status_display }}</span>
+                                    {% elif manutencao.status == 'SOLICITADA' %}<span class="badge bg-info text-white">{{ manutencao.get_status_display }}</span>
+                                    {% else %}<span class="badge bg-secondary text-white">{{ manutencao.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ manutencao.motorista.nome|default:"Admin" }}</td>
+                                <td>
+                                    <a href="{% url 'detalhes_manutencao' manutencao_id=manutencao.id %}" class="btn btn-sm btn-outline-info">Detalhes</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">Nenhum registro de manutenção encontrado.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if manutencoes.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if manutencoes.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ manutencoes.previous_page_number }}&status={{ current_status }}&veiculo={{ current_veiculo }}">&laquo; Anterior</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">Página {{ manutencoes.number }} de {{ manutencoes.paginator.num_pages }}</span></li>
+                    {% if manutencoes.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ manutencoes.next_page_number }}&status={{ current_status }}&veiculo={{ current_veiculo }}">Próxima &raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
 {% endblock %}

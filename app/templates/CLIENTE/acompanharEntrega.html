@@ -2,7 +2,7 @@
 
 {% block title %}Detalhes do Pedido #{{ entrega.id }}{% endblock %}
 
-{% block cliente_content %}
+{% block content %}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>Detalhes do Pedido #{{ entrega.id }}</h3>
         <a href="{% url 'meus_pedidos' %}" class="btn btn-secondary">Voltar para Meus Pedidos</a>
@@ -22,7 +22,6 @@
                 <div class="col-md-6">
                     <p><strong>Previsão de Entrega:</strong> {{ entrega.data_entrega_prevista|date:"d/m/Y" }}</p>
                     <p><strong>Peso:</strong> {{ entrega.peso_kg }} Kg</p>
-                    <p><strong>Volume:</strong> {{ entrega.volume_m3 }} m³</p>
                 </div>
             </div>
         </div>

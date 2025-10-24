@@ -37,8 +37,9 @@ urlpatterns = [
     path('admin/rotas/planejar/', views.comecar_planejamento_rotas, name='comecar_planejamento_rotas'),
 
     path('admin/manutencoes/', views.lista_manutencoes, name='lista_manutencoes'),
-    # path('admin/manutencoes/editar/<int:pk>/', views.editar_manutencao, name='editar_manutencao'), #depois adiciono
-    # path('admin/manutencoes/deletar/<int:pk>/', views.deletar_manutencao, name='deletar_manutencao'), #depois adiciono
+    path('admin/manutencoes/veiculos/<int:veiculo_id>', views.iniciar_manutencao_veiculo, name='iniciar_manutencao_veiculo'),
+    path('admin/manutencoes/detalhes/<int:manutencao_id>/', views.detalhes_manutencao, name='detalhes_manutencao'),
+    path('admin/manutencoes/editar/<int:manutencao_id>/', views.editar_manutencao, name='editar_manutencao'),
 
     path('admin/alertas/manutencao/', views.alerta_manutencao, name='alerta_manutencao'),
     path('admin/alertas/status/', views.alerta_status, name='alerta_status'),
@@ -51,6 +52,7 @@ urlpatterns = [
     path('motorista/minhas_entregas/', views.minhas_entregas, name='minhas_entregas'),
     path('motorista/minhas_entregas/atualizar_status/<int:pk>/', views.atualizar_status_entrega, name='atualizar_status_entrega'),
     path('motorista/rotas/iniciar/<int:rota_id>/', views.iniciar_rota, name='iniciar_rota'),
+    path('motorista/rotas/encerrar/<int:rota_id>/', views.encerrar_rota_manual, name='encerrar_rota_manual'),
 
 
     # url do Cliente

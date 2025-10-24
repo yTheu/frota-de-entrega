@@ -90,6 +90,13 @@ class Command(BaseCommand):
         for i, cluster in enumerate(clusters):
             self.stdout.write(f"Analisando Cluster #{i+1} com {len(cluster)} entregas...")
 
+            peso_total_cluster = sum(entrega.peso_kg for entrega in cluster if entrega.peso_kg is not None)
+            self.stdout.write(f"  > Peso total do cluster: {peso_total_cluster:.2f} kg.")
+
+            if peso_total_cluster > 1000.00:
+                self.stdout.write(self.style.ERROR(f"  > Peso total do cluster excede o limite máximo da frota."))
+                continue
+
             if len(cluster) < 2:
                 self.stdout.write(f"  > Cluster #{i+1} pequeno demais. Aguardando mais entregas na região.")
                 continue
@@ -108,7 +115,8 @@ class Command(BaseCommand):
             
             success, message = Rota.objects.criar_rota(
                 ids_entregas=ids_das_entregas,
-                dados_api=dados_da_api
+                dados_api=dados_da_api,
+                peso_necessario=peso_total_cluster
             )
 
             if success:

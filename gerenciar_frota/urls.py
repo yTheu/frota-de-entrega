@@ -14,6 +14,7 @@ urlpatterns = [
     # url do Administrador (dashboard personalizado)
     path('admin/', views.dashboard_admin, name='dashboard_admin'),
     path('admin/dashboard/', views.dashboard_admin, name='dashboard_admin'),
+    path('admin/exportar-csv/<str:model_slug>/', views.exportar_csv_generico, name='exportar_csv_generico'),
     path('admin/veiculos/', views.lista_veiculos, name='lista_veiculos'),
     path('admin/veiculos/adicionar/', views.adicionar_veiculo, name='adicionar_veiculo'),
     path('admin/veiculos/detalhes/<int:veiculo_id>', views.detalhes_veiculo, name='detalhes_veiculo'),

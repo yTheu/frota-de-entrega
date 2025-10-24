@@ -12,6 +12,9 @@
             <a class="btn btn-primary" href="{% url 'adicionar_veiculo' %}">
                 <i class="fas fa-plus-circle mr-2"></i>Adicionar Veículo
             </a>
+            <a class="btn btn-outline-secondary me-2" href="{% url 'exportar_csv_generico' model_slug='veiculos' %}">
+                <i class="fas fa-file-csv me-2"></i>Exportar Veículos CSV
+            </a>
         </div>
     </div>
 

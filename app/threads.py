@@ -1,6 +1,6 @@
 import time
 from django.db import connections, transaction
-from .models import Rota, Coordenada, HistoricoEntrega, Entrega, Veiculo
+from .models import Rota, Coordenada, HistoricoEntrega, Entrega, Veiculo, Manutencao
 from django.utils import timezone
 import googlemaps
 import random
@@ -34,12 +34,22 @@ def simular_manutencao_veiculo(veiculo_id):
         
         with transaction.atomic():
             veiculo_atualizado = Veiculo.objects.select_for_update().get(id=veiculo_id)
+            nova_data_manutencao = timezone.now().date()
+            nova_km_manutencao = veiculo_atualizado.km
             
             veiculo_atualizado.status = 'DISPONIVEL'
             veiculo_atualizado.ultimaManutencao = timezone.now().date()
             veiculo_atualizado.km_ultima_manutencao = veiculo_atualizado.km
             veiculo_atualizado.save()
-            
+
+            Manutencao.objects.create(
+                veiculo=veiculo_atualizado,
+                tipo='PREVENTIVA',
+                descricao=f'Manutenção preventiva simulada concluída em {nova_data_manutencao.strftime("%d/%m/%Y")}.',
+                data=nova_data_manutencao,
+                status='CONCLUIDA',
+            )
+
         print(f"{frufru.AMARELO}[MANUTENÇÃO {placa}]{frufru.FIM} {frufru.VERDE}CONCLUÍDA.{frufru.FIM} Veículo agora está DISPONÍVEL.")
 
     except Veiculo.DoesNotExist:
@@ -91,7 +101,7 @@ def executar_rota_em_thread(rota_id):
         total_de_pontos = len(pontos_do_trajeto)
         print(f"{log_prefix} Trajeto definido com {total_de_pontos} pontos geográficos.")
         
-        porcentagem_compreesao = 0.01
+        porcentagem_compreesao = 0.005
         duracao_real_em_minutos = rota.duracao_estimada_minutos or 60
         duracao_total_simulacao = (duracao_real_em_minutos * 60) *porcentagem_compreesao
 
@@ -124,7 +134,7 @@ def executar_rota_em_thread(rota_id):
                         print(f"{log_prefix} {frufru.VERDE}Chegou ao destino da Entrega #{entrega.id}!{frufru.FIM}")
                         
                         with transaction.atomic():
-                            # Rebusca a entrega para evitar race conditions
+                            # rebusca a entrega para evitar race conditions
                             entrega_atualizada = Entrega.objects.select_for_update().get(id=entrega.id)
                             if entrega_atualizada.status == 'EM_ROTA':
                                 entrega_atualizada.status = 'ENTREGUE'

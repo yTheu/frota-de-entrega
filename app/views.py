@@ -1,7 +1,6 @@
 
-import threading
-from datetime import timedelta
-import googlemaps
+import threading, csv, googlemaps
+from datetime import timedelta, date
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -12,7 +11,7 @@ from django.core.management import call_command
 from django.core.paginator import Paginator
 from django.db import connections, models, transaction
 from django.db.models import OuterRef, Q, Subquery
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from .forms import AbastecimentoForm, EntregaForm, LoginForm, ManutencaoForm, MotoristaForm, VeiculoForm, ClienteRegistrationForm
@@ -154,6 +153,107 @@ def dashboard_admin(request):
         'veiculos_com_alerta': veiculos_com_alerta[:5],
     }
     return render(request, 'ADMIN/dashboard_admin.html', contexto)
+
+#exportar para csv
+EXPORT_CONFIG = {
+    'entregas': (
+        Entrega, 
+        [
+            ('ID Entrega', 'id'),
+            ('Status', 'get_status_display'),
+            ('Cliente', 'cliente__nome_empresa'),
+            ('Origem', 'origem__endereco_completo'),
+            ('Destino', 'destino__endereco_completo'),
+            ('Data Pedido', 'data_pedido'),
+            ('Previsão Entrega', 'data_entrega_prevista'),
+            ('Entrega Real', 'data_entrega_real'),
+            ('ID Rota', 'rota_id'),
+            ('Placa Veículo', 'rota__veiculo__placa'),
+            ('Motorista', 'rota__motorista__nome'),
+            ('Peso KG', 'peso_kg'),
+        ]
+    ),
+    'veiculos': (
+        Veiculo,
+        [
+            ('ID', 'id'),
+            ('Placa', 'placa'),
+            ('Modelo', 'modelo'),
+            ('KM Atual', 'km'),
+            ('Status', 'get_status_display'),
+            ('Última Manutenção', 'ultimaManutencao'),
+            ('KM Última Manutenção', 'km_ultima_manutencao'),
+            ('Capacidade KG', 'capacidade_kg'),
+        ]
+    ),
+    'motoristas': (
+        PerfilMotorista,
+        [
+            ('ID', 'id'),
+            ('Nome', 'nome'),
+            ('CPF', 'cpf'),
+            ('CNH', 'num_cnh'),
+            ('Status', 'disponivel'),
+        ]
+    ),
+}
+
+def get_value_from_object(obj, field_path):
+    try:
+        current = obj
+        parts = field_path.split('__')
+        for part in parts:
+            if current is None: return ''
+            attr = getattr(current, part)
+            current = attr() if callable(attr) else attr
+
+        if isinstance(current, (timezone.datetime, date)): 
+             return current.strftime('%Y-%m-%d %H:%M:%S' if isinstance(current, timezone.datetime) else '%Y-%m-%d')
+        
+        return str(current) if current is not None else ''
+        
+    except AttributeError:
+        return f'Erro: Campo {part} inválido' 
+    except Exception as e:
+        print(f"Erro inesperado em get_value_from_object para '{field_path}' no objeto {obj}: {e}")
+        return 'Erro'
+
+@login_required
+@user_passes_test(is_admin)
+def exportar_csv_generico(request, model_slug):
+    config = EXPORT_CONFIG.get(model_slug)
+    if not config:
+        raise Http404(f"Configuração de exportação não encontrada para '{model_slug}'.")
+
+    ModelClass, field_config = config
+    print(f"\n--- EXPORTANDO CSV PARA: {model_slug} (Model: {ModelClass.__name__}) ---")
+    
+    nome_arquivo = f"{model_slug}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    
+    response = HttpResponse(content_type='text/csv', headers={'Content-Disposition': f'attachment; filename="{nome_arquivo}"'})
+    response.write(u'\ufeff'.encode('utf8'))
+
+    writer = csv.writer(response, delimiter=';')
+
+    headers = [col_name for col_name, field_path in field_config]
+    writer.writerow(headers)
+
+    queryset = ModelClass.objects.all()
+    total_encontrado = queryset.count()
+    print(f"--- Foram encontrados {total_encontrado} registros no banco de dados. ---")
+
+    registros_escritos = 0
+    if total_encontrado > 0:
+        print("--- Iniciando loop para escrever as linhas... ---")
+        for obj in queryset:
+            row_data = [get_value_from_object(obj, field_path) for col_name, field_path in field_config]
+            writer.writerow(row_data)
+            registros_escritos += 1
+        print(f"--- Loop finalizado. {registros_escritos} linhas escritas no CSV. ---")
+    else:
+        print("--- Queryset vazio. Nenhuma linha será escrita no CSV (além do cabeçalho). ---")
+
+    return response
 
 @login_required
 @user_passes_test(is_admin)
@@ -662,11 +762,10 @@ def atualizar_status_entrega(request, pk):
 @user_passes_test(is_motorista)
 def iniciar_rota(request, rota_id):
     if request.method == 'POST':
-        # Garante que o motorista só pode iniciar uma rota que é dele
         rota = get_object_or_404(Rota, pk=rota_id, motorista=request.user.perfilmotorista)
         
         if rota.status == 'PLANEJADA':
-            # Inicia a thread da simulação em background
+            # inicia a thread
             thread = threading.Thread(target=executar_rota_em_thread,args=(rota.id,))
             thread.start()
 
@@ -674,7 +773,6 @@ def iniciar_rota(request, rota_id):
         else:
             messages.warning(request, "Esta rota não pode ser iniciada (já está em andamento ou foi concluída).")
             
-    # Redireciona de volta para o dashboard, onde ele verá a rota como 'ativa'
     return redirect('dashboard_motorista')
 
 @login_required
@@ -889,7 +987,4 @@ def register_motorista(request):
     else:
         user_form = UserCreationForm()
         motorista_form = MotoristaForm()
-    return render(request, 'ADMIN/motoristas/adicionarMotorista.html', {
-        'user_form': user_form,
-        'motorista_form': motorista_form,
-    })
+    return render(request, 'ADMIN/motoristas/adicionarMotorista.html', {'user_form': user_form, 'motorista_form': motorista_form})

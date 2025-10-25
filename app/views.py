@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from .forms import AbastecimentoForm, EntregaForm, LoginForm, ManutencaoForm, MotoristaForm, VeiculoForm, ClienteRegistrationForm
 from .models import Abastecimento, Coordenada, Entrega, HistoricoEntrega, Manutencao, PerfilCliente, PerfilMotorista, Rota, Veiculo
-from .threads import executar_rota_em_thread, simular_manutencao_veiculo
+from .threads import executar_rota_em_thread, simular_manutencao_veiculo, frufru
 
 gmaps = googlemaps.Client(key=settings.GOOGLE_MAPS_API_KEY) #inicializa a comunicação com a API
 
@@ -783,13 +783,13 @@ def encerrar_rota_manual(request, rota_id):
         
         try:
             with transaction.atomic():
-                print(f"[MANUAL] Encerrando Rota #{rota.id} a pedido do motorista.")
+                print(f"{frufru.VERMELHO}[MANUAL] Encerrando Rota #{rota.id} a pedido do motorista.")
                 
                 rota.status = 'CONCLUIDA'
                 rota.data_fim_real = timezone.now()
                 rota.save()
                 
-                rota.veiculo.status = 'DISPONIVEL'
+                rota.veiculo.status_veiculo = 'DISPONIVEL'
                 rota.veiculo.save()
                 
                 rota.motorista.disponivel = True

@@ -2,7 +2,6 @@
 .env
 
 # Ambiente Virtual Python
-# Ignora a pasta venv, independente de onde ela esteja
 venv/
 env/
 */env/
@@ -23,7 +22,6 @@ __pycache__/
 .idea/
 
 # Arquivos gerados pelo Django
-# Pastas para onde os arquivos de media e estáticos são coletados
 media/
 staticfiles/
 *.log
